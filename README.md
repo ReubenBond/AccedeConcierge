@@ -1,4 +1,8 @@
-# Accede
+# Accede Concierge
+
+_Earth's premiere Travel Booking and Expense reporting app_
+
+## Basic workflow
 
 ```mermaid
 sequenceDiagram

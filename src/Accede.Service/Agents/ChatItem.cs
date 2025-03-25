@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.AI;
-using System.Text;
 
 namespace Accede.Service.Agents;
 
