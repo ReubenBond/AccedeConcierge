@@ -1,31 +1,7 @@
 ﻿using Microsoft.Extensions.AI;
+using System.Distributed.AI.Agents;
 
 namespace Accede.Service.Agents;
-
-[GenerateSerializer]
-public abstract class ChatItem(string text)
-{
-    [Id(0)]
-    public string Text { get; init; } = text;
-
-    public abstract ChatRole Role { get; }
-
-    public abstract string Type { get; }
-
-    public abstract bool IsUserVisible { get; }
-
-    public virtual ChatMessage? ToChatMessage() => new ChatMessage(Role, Text);
-    internal bool IsUserMessage => Role == ChatRole.User;
-}
-
-[GenerateSerializer]
-public class IssueDetail(string text) : ChatItem(text)
-{
-    public override string Type => "issue-detail";
-    public override ChatRole Role => ChatRole.Assistant;
-    public override bool IsUserVisible => true;
-    public override ChatMessage? ToChatMessage() => new ChatMessage(ChatRole.User, $"Here are the details of the issue you are working on:\n{Text}");
-}
 
 [GenerateSerializer]
 public class SystemPrompt(string text) : ChatItem(text)
@@ -87,20 +63,6 @@ public class StatusChatItem(string text) : ChatItem(text)
     public override bool IsUserVisible => true;
     public override ChatMessage? ToChatMessage() => null;
 }
-
-[GenerateSerializer]
-public class AssistantResponseFragment(string text) : ChatItem(text)
-{
-    public override string Type => nameof(AssistantResponseFragment);
-
-    [Id(0)]
-    public required string? ResponseId { get; set; }
-    [Id(1)]
-    public required bool IsFinal { get; set; }
-    public override ChatRole Role => ChatRole.Assistant;
-    public override bool IsUserVisible => true;
-}
-
 [GenerateSerializer]
 public class AgentMessage(string agentName, string text) : ChatItem(text)
 {

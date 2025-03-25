@@ -1,15 +1,16 @@
-﻿using Accede.Service.Api;
-using Accede.Service.Utilities;
+﻿using Accede.Service.Utilities;
 using Accede.Service.Utilities.Functions;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
 using Orleans.Journaling;
 using System.Collections.ObjectModel;
+using System.Distributed.AI.Agents;
 using System.Runtime.CompilerServices;
 
 namespace Accede.Service.Agents;
 
-internal abstract class ChatAgent(
-    ILogger<UserLiaisonAgent> logger,
+public abstract class ChatAgent(
+    ILogger logger,
     IChatClient chatClient,
     IDurableQueue<ChatItem> pendingMessages,
     IDurableList<ChatItem> conversationHistory) : DurableGrain
@@ -119,39 +120,11 @@ internal abstract class ChatAgent(
 
                 if (lastMessage is null)
                 {
-                    if (conversationHistory.Count == 0)
+                    // Give application code a chance to seed the conversation.
+                    bool flowControl = await SeedConversation(chatMessages, shutdownToken, currentChatCancellation);
+                    if (!flowControl)
                     {
-                        var newMessages = await OnChatCreatedAsync(shutdownToken);
-                        if (newMessages is { Count: > 0 })
-                        {
-                            foreach (var msg in newMessages)
-                            {
-                                conversationHistory.Add(msg);
-                                if (msg.ToChatMessage() is { } chatMsg)
-                                {
-                                    chatMessages.Add(chatMsg);
-                                }
-                            }
-
-                            await WriteStateAsync(shutdownToken);
-                            _historyUpdatedEvent.SignalAndReset();
-                            continue;
-                        }
-                    }
-                    else
-                    {
-                        var newMessages = await OnChatIdleAsync(currentChatCancellation);
-                        if (newMessages is { Count: > 0 })
-                        {
-                            foreach (var msg in newMessages)
-                            {
-                                pendingMessages.Enqueue(msg);
-                            }
-
-                            await WriteStateAsync(shutdownToken);
-                            _pendingMessageEvent.SignalAndReset();
-                            continue;
-                        }
+                        continue;
                     }
 
                     // Wait for a user message
@@ -233,6 +206,56 @@ internal abstract class ChatAgent(
         }
     }
 
+    private async Task<bool> SeedConversation(List<ChatMessage> chatMessages, CancellationToken shutdownToken, CancellationToken currentChatCancellation)
+    {
+        List<ChatItem> newMessages;
+        bool createdConversation = false;
+        if (conversationHistory.Count == 0)
+        {
+            // Create the conversation.
+            newMessages = await OnChatCreatedAsync(shutdownToken);
+            if (newMessages is { Count: > 0 })
+            {
+                createdConversation = true;
+                foreach (var msg in newMessages)
+                {
+                    conversationHistory.Add(msg);
+                    if (msg.ToChatMessage() is { } chatMsg)
+                    {
+                        chatMessages.Add(chatMsg);
+                    }
+                }
+            }
+        }
+        else
+        {
+            // Prod the conversation along.
+            newMessages = await OnChatIdleAsync(currentChatCancellation);
+            if (newMessages is { Count: > 0 })
+            {
+                foreach (var msg in newMessages)
+                {
+                    pendingMessages.Enqueue(msg);
+                }
+
+            }
+        }
+
+        if (newMessages is { Count: > 0 })
+        {
+            await WriteStateAsync(shutdownToken);
+            _pendingMessageEvent.SignalAndReset();
+            if (createdConversation)
+            {
+                _historyUpdatedEvent.SignalAndReset();
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
     public async ValueTask CancelAsync(CancellationToken cancellationToken = default)
     {
         var currentCts = _currentChatCts;
@@ -285,14 +308,8 @@ internal abstract class ChatAgent(
                 false => message.Text[(partialMessageFragment?.Length ?? 0)..]
             };
 
-            var data = message switch
-            {
-                AddLabelMessage addLabel => addLabel.Label,
-                _ => null
-            };
-
             logger.LogInformation("{IsFinal}: {UpdateText}", isFinal, updateText);
-            yield return new ClientMessageFragment(message.Role.Value, updateText, responseId, Type: message.Type, IsFinal: isFinal, Data: data);
+            yield return new ClientMessageFragment(message.Role.Value, updateText, responseId, Type: message.Type, IsFinal: isFinal);
 
             // If there is a subsequent message, advance, otherwise wait for an update.
             if (conversationHistory.Count > i + 1)

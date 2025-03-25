@@ -2,6 +2,7 @@
 using Microsoft.Extensions.AI;
 using Orleans.Concurrency;
 using Orleans.Journaling;
+using System.Distributed.AI.Agents;
 #pragma warning disable 1998
 
 namespace Accede.Service.Agents;
@@ -29,11 +30,16 @@ internal sealed partial class UserLiaisonAgent(
 
     protected override async Task<List<ChatItem>> OnChatCreatedAsync(CancellationToken cancellationToken)
     {
+        var userName = this.GetPrimaryKeyString();
         return
             [
                 new SystemPrompt(
                     $"""
-
+                    You are a travel agent, liaising with a user, '{this.GetPrimaryKeyString()}'.
+                    You are helping them to:
+                    - book travel
+                    - submit expense reports
+                    - provide 
                     """)
             ];
     }

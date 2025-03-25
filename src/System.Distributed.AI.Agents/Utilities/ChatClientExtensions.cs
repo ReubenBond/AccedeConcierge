@@ -3,6 +3,9 @@ using Azure;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
 using Accede.Service.Utilities;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 
 namespace Accede.Service.Utilities;
 

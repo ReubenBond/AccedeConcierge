@@ -82,6 +82,3 @@ public static class TravelAgencyApi
 }
 
 public record Prompt(string Text);
-
-[GenerateSerializer]
-public record ClientMessageFragment(string Role, string Text, string? ResponseId, string Type, bool IsFinal, string? Data);
