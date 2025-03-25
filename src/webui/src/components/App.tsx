@@ -1,97 +1,24 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import ChatService, { GitHubIssue } from '../services/ChatService';
-import { Message, GitHubIssueWithStatus } from '../types/ChatTypes';
-import Sidebar from './Sidebar';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import ChatService from '../services/ChatService';
+import { Message } from '../types/ChatTypes';
 import ChatContainer from './ChatContainer';
 import VirtualizedChatList from './VirtualizedChatList';
+import logo from '../logo.svg';
 import './App.css';
 
 const loadingIndicatorId = 'loading-indicator';
 
-interface IssueParams {
-    owner?: string;
-    repository?: string;
-    issueNumber?: string;
-    [key: string]: string | undefined;
-}
-
 const App: React.FC = () => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [prompt, setPrompt] = useState<string>('');
-    const [issues, setIssues] = useState<GitHubIssueWithStatus[]>([]);
-    const [selectedIssue, setSelectedIssue] = useState<GitHubIssue | null>(null);
-    const selectedIssueRef = useRef<GitHubIssue | null>(null);
-    const [loadingIssues, setLoadingIssues] = useState<boolean>(true);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
     const [shouldAutoScroll, setShouldAutoScroll] = useState<boolean>(true);
     const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
-    const { owner, repository, issueNumber } = useParams<IssueParams>();
-    const navigate = useNavigate();
-    const POLL_INTERVAL = 5000;
-    const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    const chatService = useMemo(() => ChatService.getInstance('/api/issues'), []);
+    const chatService = ChatService.getInstance('/api');
 
     useEffect(() => {
-        const fetchIssues = async () => {
-            try {
-                const data = await chatService.getActiveIssues();
-                setIssues(prevIssues => {
-                    // Only update if the issues have actually changed
-                    const hasChanged = JSON.stringify(data) !== JSON.stringify(prevIssues);
-                    return hasChanged ? data : prevIssues;
-                });
-            } catch (error) {
-                console.error('Error fetching issues:', error);
-            } finally {
-                setLoadingIssues(false);
-            }
-        };
-
-        // Initial fetch
-        fetchIssues();
-
-        // Set up polling
-        pollIntervalRef.current = setInterval(fetchIssues, POLL_INTERVAL);
-
-        // Initial issue selection if URL parameters exist
-        if (owner && repository && issueNumber) {
-            const issue: GitHubIssue = {
-                owner,
-                repository,
-                issueNumber: parseInt(issueNumber, 10)
-            };
-            handleIssueSelect(issue);
-        }
-
-        // Cleanup polling on unmount
-        return () => {
-            if (pollIntervalRef.current) {
-                clearInterval(pollIntervalRef.current);
-            }
-        };
-    }, [owner, repository, issueNumber, chatService]);
-
-    const onSelectIssue = useCallback((issue: GitHubIssue) => {
-        navigate(`/issue/${issue.owner}/${issue.repository}/${issue.issueNumber}`);
-    }, [navigate]);
-
-    const scrollToBottom = useCallback(() => {
-        if (messagesEndRef.current && shouldAutoScroll) {
-            messagesEndRef.current.scrollTo({
-                top: messagesEndRef.current.scrollHeight,
-                behavior: streamingMessageId ? 'smooth' : 'instant'
-            });
-        }
-    }, [shouldAutoScroll, streamingMessageId]);
-
-    const handleIssueSelect = useCallback(async (issue: GitHubIssue) => {
-        setSelectedIssue(issue);
-        selectedIssueRef.current = issue;
-        setMessages([]);
-
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
         }
@@ -100,16 +27,12 @@ const App: React.FC = () => {
 
         (async () => {
             try {
-                console.log('streamIssue started:', issue);
-                const stream = chatService.stream(issue, 0, abortController);
+                console.log('Starting chat stream');
+                const stream = chatService.stream(0, abortController);
                 
                 let currentResponseId: string | null = null;
                 
                 for await (const fragment of stream) {
-                    if (selectedIssueRef.current !== issue) {
-                        break;
-                    }
-                    
                     if (fragment.responseId && fragment.responseId !== currentResponseId) {
                         currentResponseId = fragment.responseId;
                         if (!fragment.isFinal) {
@@ -129,37 +52,36 @@ const App: React.FC = () => {
             } catch (error) {
                 console.error('Stream error:', error);
             } finally {
-                console.log('streamIssue finished:', issue);
+                console.log('Chat stream finished');
                 setStreamingMessageId(null);
             }
         })();
-    }, [chatService, scrollToBottom]);
+
+        return () => {
+            abortController.abort();
+        };
+    }, [chatService]);
 
     const updateMessageById = (id: string, newText: string, role: string, type: string, isFinal: boolean = false, data: string | undefined = undefined) => {
         const generatingReplyMessageText = 'Generating reply...';
 
         function getMessageText(existingText: string | undefined, newText: string): string {
-            // If existingText is undefined or null, just return the new text
             if (!existingText) {
                 return newText;
             }
             
-            // If the existing text is the same as the generating reply message text, replace it with the new text 
             if (existingText === generatingReplyMessageText) {
                 return newText;
             }
 
-            // If the existing text starts with the generating reply message text, replace it with the new text
             if (existingText.startsWith(generatingReplyMessageText)) {
                 return existingText.replace(generatingReplyMessageText, '') + newText;
             }
 
-            if (newText.startsWith(existingText))
-            {
+            if (newText.startsWith(existingText)) {
                 return newText;
             }
 
-            // Otherwise, append the new text to the existing text
             return existingText + newText;
         }
 
@@ -184,8 +106,7 @@ const App: React.FC = () => {
                 );
             } else {
                 return [...prevMessages.filter(msg => msg.responseId !== loadingIndicatorId),
-                { responseId: id, role, text: newText, type: type, isLoading: false, data: data },
-                ];
+                { responseId: id, role, text: newText, type: type, isLoading: false, data: data }];
             }
         });
     };
@@ -197,25 +118,21 @@ const App: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        const container = messagesEndRef.current;
-        if (container) {
-            container.addEventListener('scroll', handleScroll as unknown as EventListener);
-            return () => container.removeEventListener('scroll', handleScroll as unknown as EventListener);
+        // Instead of direct scroll listener, we'll rely on the checkScroll function in ChatContainer
+        if (shouldAutoScroll && messagesEndRef.current) {
+            // Using scrollTo instead of scrollIntoView for better control
+            messagesEndRef.current.scrollTo({
+                top: messagesEndRef.current.scrollHeight,
+                behavior: streamingMessageId ? 'smooth' : 'auto'
+            });
         }
-    }, [handleScroll]);
-
-    useEffect(() => {
-        if (shouldAutoScroll) {
-            scrollToBottom();
-        }
-    }, [messages, scrollToBottom]);
+    }, [messages, shouldAutoScroll, streamingMessageId]);
 
     const handleSubmit = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!prompt.trim() || !selectedIssue) return;
-        if (streamingMessageId) return;
+        if (!prompt.trim() || streamingMessageId) return;
 
-        const userMessage = { responseId: `${Date.now()}`, role: 'user', text: prompt } as Message;
+        const userMessage = { responseId: `${Date.now()}`, role: 'user', text: prompt, type: 'UserMessage' } as Message;
         setMessages(prevMessages => [...prevMessages, userMessage]);
 
         setMessages(prevMessages => [
@@ -224,7 +141,7 @@ const App: React.FC = () => {
         ]);
 
         try {
-            await chatService.sendPrompt(selectedIssue, prompt);
+            await chatService.sendMessage(prompt);
             setPrompt('');
         } catch (error) {
             console.error('handleSubmit error:', error);
@@ -234,81 +151,60 @@ const App: React.FC = () => {
                 )
             );
         }
-    }, [prompt, selectedIssue, streamingMessageId, chatService]);
-
-    const handleDeleteIssueChat = async (e: React.MouseEvent, issue: GitHubIssue) => {
-        e.stopPropagation();
-        try {
-            await chatService.deleteIssueChat(issue);
-            
-            // Remove the issue from the list or mark it as inactive
-            setIssues(prevIssues => prevIssues.filter(i => 
-                !(i.id.owner === issue.owner && 
-                  i.id.repository === issue.repository && 
-                  i.id.issueNumber === issue.issueNumber)
-            ));
-            
-            if (selectedIssue && 
-                selectedIssue.owner === issue.owner && 
-                selectedIssue.repository === issue.repository && 
-                selectedIssue.issueNumber === issue.issueNumber) {
-                setSelectedIssue(null);
-                setMessages([]);
-            }
-        } catch (error) {
-            console.error('handleDeleteIssueChat error:', issue, error);
-        }
-    };
+    }, [prompt, streamingMessageId, chatService]);
 
     const cancelChat = () => {
-        if (!streamingMessageId || !selectedIssue) return;
-        chatService.cancelIssueChat(selectedIssue);
+        if (!streamingMessageId) return;
+        chatService.cancelChat();
     };
-
-    // Transform GitHubIssue into Chat objects for compatibility with Sidebar
-    const issuesToChats = useMemo(() => {
-        return issues.map(issue => ({
-            id: `${issue.id.owner}/${issue.id.repository}/${issue.id.issueNumber}`,
-            issue
-        }));
-    }, [issues]);
-
-    const selectedChatId = selectedIssue ? 
-        `${selectedIssue.owner}/${selectedIssue.repository}/${selectedIssue.issueNumber}` : null;
 
     return (
         <div className="app-container">
-            <Sidebar
-                chats={issuesToChats}
-                selectedChatId={selectedChatId}
-                loadingChats={loadingIssues}
-                handleDeleteChat={(e, chatId) => {
-                    const chat = issuesToChats.find(c => c.id === chatId);
-                    if (chat?.issue) {
-                        handleDeleteIssueChat(e, chat.issue.id);
-                    }
-                }}
-                onSelectChat={(chatId) => {
-                    const chat = issuesToChats.find(c => c.id === chatId);
-                    if (chat?.issue) {
-                        onSelectIssue(chat.issue.id);
-                    }
-                }}
-            />
-            <ChatContainer
-                messages={messages}
-                prompt={prompt}
-                setPrompt={setPrompt}
-                handleSubmit={handleSubmit}
-                cancelChat={cancelChat}
-                streamingMessageId={streamingMessageId}
-                messagesEndRef={messagesEndRef}
-                shouldAutoScroll={shouldAutoScroll}
-                chatId={selectedChatId || ''}
-                renderMessages={() => (
-                    <VirtualizedChatList messages={messages} />
-                )}
-            />
+            <header className="app-header">
+                <div className="logo">
+                    <img src={logo} alt="Accede Logo" />
+                    <h1>Accede Concierge</h1>
+                </div>
+                <div className="header-actions">
+                    <div className="user-info">
+                        <span className="user-name">Welcome, Terry</span>
+                        <div className="user-avatar">
+                            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="#4A5568" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                <path d="M12 11C14.2091 11 16 9.20914 16 7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7C8 9.20914 9.79086 11 12 11Z" stroke="#4A5568" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            <div className="main-content">
+                <div className="chat-window">
+                    <ChatContainer
+                        messages={messages}
+                        prompt={prompt}
+                        setPrompt={setPrompt}
+                        handleSubmit={handleSubmit}
+                        cancelChat={cancelChat}
+                        streamingMessageId={streamingMessageId}
+                        messagesEndRef={messagesEndRef}
+                        shouldAutoScroll={shouldAutoScroll}
+                        chatId=""
+                        renderMessages={() => (
+                            <VirtualizedChatList messages={messages} />
+                        )}
+                    />
+                </div>
+            </div>
+            <footer className="app-footer">
+                <div className="footer-content">
+                    <span>© 2025 Accede Concierge &mdash; an eShop company.</span>
+                    <div className="footer-links">
+                        <a href="#">Help</a>
+                        <a href="#">Privacy Policy</a>
+                        <a href="#">Terms of Service</a>
+                    </div>
+                </div>
+            </footer>
         </div>
     );
 };

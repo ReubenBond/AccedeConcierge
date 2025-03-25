@@ -1,16 +1,10 @@
-import { GitHubIssueWithStatus, Message, MessageFragment } from '../types/ChatTypes';
+import { Message, MessageFragment } from '../types/ChatTypes';
 import { UnboundedChannel } from '../utils/UnboundedChannel';
-
-export interface GitHubIssue {
-    owner: string;
-    repository: string;
-    issueNumber: number;
-}
 
 class ChatService {
     private static instance: ChatService;
     private backendUrl: string;
-    private activeStreams = new Map<string, { eventSource: EventSource, channel: UnboundedChannel<MessageFragment> }>();
+    private activeStream?: { eventSource: EventSource, channel: UnboundedChannel<MessageFragment> };
 
     private constructor(backendUrl: string) {
         this.backendUrl = backendUrl;
@@ -23,34 +17,16 @@ class ChatService {
         return ChatService.instance;
     }
 
-    private getIssueId(issue: GitHubIssue): string {
-        return `${issue.owner}/${issue.repository}/${issue.issueNumber}`;
-    }
-
-    async getActiveIssues(): Promise<GitHubIssueWithStatus[]> {
-        const response = await fetch(`${this.backendUrl}`);
-        if (!response.ok) {
-            throw new Error('Error fetching active issues');
-        }
-        return await response.json();
-    }
-
     async *stream(
-        issue: GitHubIssue,
-        messageCount: number,
+        startIndex: number,
         abortController: AbortController
     ): AsyncGenerator<MessageFragment> {
-        const issueId = this.getIssueId(issue);
-        let startIndex = messageCount;
-
-        // Set up and store the abort event handler
         const abortHandler = () => {
-            console.log(`Aborting stream for issue: ${issueId}`);
-            const activeStream = this.activeStreams.get(issueId);
-            if (activeStream) {
-                activeStream.eventSource.close();
-                activeStream.channel.close();
-                this.activeStreams.delete(issueId);
+            console.log('Aborting chat stream');
+            if (this.activeStream) {
+                this.activeStream.eventSource.close();
+                this.activeStream.channel.close();
+                this.activeStream = undefined;
             }
         };
 
@@ -61,10 +37,10 @@ class ChatService {
                 let channel = new UnboundedChannel<MessageFragment>();
                 
                 try {
-                    const eventSource = new EventSource(`${this.backendUrl}/i/chat/${issueId}/stream?startIndex=${startIndex}`);
+                    const eventSource = new EventSource(`${this.backendUrl}/chat/stream?startIndex=${startIndex}`);
                     
                     // Store the event source and channel
-                    this.activeStreams.set(issueId, { eventSource, channel });
+                    this.activeStream = { eventSource, channel };
                     
                     // Handle messages
                     eventSource.addEventListener('message', (event) => {
@@ -78,14 +54,13 @@ class ChatService {
                                 responseId: value.responseId,
                                 data: value.data
                             };
-                            
+
                             if (fragment.isFinal) {
                                 // Increment the start index for the next connection
                                 startIndex++;
                             }
                             
                             channel.write(fragment);
-
                         } catch (error) {
                             console.error(`Error processing SSE message: ${error}`);
                         }
@@ -93,14 +68,14 @@ class ChatService {
                     
                     // Handle complete event
                     eventSource.addEventListener('complete', () => {
-                        console.debug(`Stream completed for issue: ${issueId}`);
+                        console.debug('Stream completed');
                         eventSource.close();
                         channel.close();
                     });
                     
                     // Handle error event
                     eventSource.addEventListener('error', event => {
-                        console.error(`Stream error for issue: ${issueId}: ${event}`);
+                        console.error(`Stream error: ${event}`);
                         eventSource.close();
                         channel.throwError(new Error('SSE connection failed'));
                     });
@@ -114,17 +89,15 @@ class ChatService {
                     }
                 } catch (error) {
                     console.error('Stream error:', error);
-                    // Only break the loop if we're aborting
                     if (abortController.signal.aborted) {
                         break;
                     }
                 } finally {
-                    this.activeStreams.delete(issueId);
+                    this.activeStream = undefined;
                 }
 
-                // If we're not aborting, wait a second before retrying
                 if (!abortController.signal.aborted) {
-                    console.debug(`Retrying stream for issue: ${issueId} in 1 second`);
+                    console.debug('Retrying stream in 1 second');
                     await new Promise(resolve => setTimeout(resolve, 1000));
                 }
             }
@@ -133,12 +106,11 @@ class ChatService {
         }
     }
 
-    async sendPrompt(issue: GitHubIssue, prompt: string): Promise<void> {
-        const issueId = this.getIssueId(issue);
-        const response = await fetch(`${this.backendUrl}/i/chat/${issueId}`, {
+    async sendMessage(text: string): Promise<void> {
+        const response = await fetch(`${this.backendUrl}/chat/messages`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: prompt })
+            body: JSON.stringify({ text })
         });
 
         if (!response.ok) {
@@ -148,28 +120,16 @@ class ChatService {
             } catch (e) {
                 errorMessage = response.statusText;
             }
-            throw new Error(`Error sending prompt: ${errorMessage}`);
+            throw new Error(`Error sending message: ${errorMessage}`);
         }
     }
 
-    async deleteIssueChat(issue: GitHubIssue): Promise<void> {
-        const issueId = this.getIssueId(issue);
-        const response = await fetch(`${this.backendUrl}/i/${issueId}`, {
-            method: 'DELETE'
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to delete issue chat');
-        }
-    }
-
-    async cancelIssueChat(issue: GitHubIssue): Promise<void> {
-        const issueId = this.getIssueId(issue);
-        const response = await fetch(`${this.backendUrl}/i/${issueId}/cancel`, {
+    async cancelChat(): Promise<void> {
+        const response = await fetch(`${this.backendUrl}/chat/stream/cancel`, {
             method: 'POST'
         });
         if (!response.ok) {
-            throw new Error('Failed to cancel issue chat');
+            throw new Error('Failed to cancel chat');
         }
     }
 }

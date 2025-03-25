@@ -5,7 +5,6 @@ import App from './components/App';
 const AppRouter: React.FC = () => (
     <BrowserRouter>
         <Routes>
-            <Route path="/issue/:owner/:repository/:issueNumber" element={<App />} />
             <Route path="/" element={<App />} />
         </Routes>
     </BrowserRouter>

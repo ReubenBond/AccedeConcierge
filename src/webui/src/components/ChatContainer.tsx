@@ -1,7 +1,6 @@
-import React, { useEffect, ReactNode, RefObject, useState } from 'react';
+import React, { useEffect, ReactNode, RefObject, useState, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import remarkGithub from 'remark-github';
 import remarkBreaks from 'remark-breaks';
 import { Message } from '../types/ChatTypes';
 
@@ -26,17 +25,12 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
     cancelChat,
     streamingMessageId,
     messagesEndRef,
-    shouldAutoScroll,
-    chatId
+    shouldAutoScroll
 }: ChatContainerProps) => {
-    // State to track which message was copied
     const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
-    const [postingMsgId, setPostingMsgId] = useState<string | null>(null);
-    const [applyingLabelMsgId, setApplyingLabelMsgId] = useState<string | null>(null);
-
-    // Extract repository info from chatId
-    const [owner, repository] = chatId.split('/');
-    const remarkGithubConfig = { repository: `${owner}/${repository}` };
+    const [canScrollUp, setCanScrollUp] = useState<boolean>(false);
+    const [canScrollDown, setCanScrollDown] = useState<boolean>(false);
+    const containerRef = useRef<HTMLDivElement | null>(null);
 
     // Function to copy message text to clipboard
     const copyToClipboard = (text: string, msgId: string) => {
@@ -52,37 +46,16 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         );
     };
 
-    // Function to post draft response
-    const postDraftResponse = async (owner: string, repository: string, issueNumber: string, msgId: string) => {
-        try {
-            setPostingMsgId(msgId);
-            const response = await fetch(`/api/issues/i/draft/${owner}/${repository}/${issueNumber}/accept`, {
-                method: 'POST'
-            });
-            if (!response.ok) {
-                throw new Error('Failed to post response');
-            }
-        } catch (error) {
-            console.error('Error posting response:', error);
-        } finally {
-            setPostingMsgId(null);
-        }
-    };
-
-    // Function to apply label
-    const applyLabel = async (owner: string, repository: string, issueNumber: string, label: string, msgId: string) => {
-        try {
-            setApplyingLabelMsgId(msgId);
-            const response = await fetch(`/api/issues/i/label/${owner}/${repository}/${issueNumber}/add/${label}`, {
-                method: 'POST'
-            });
-            if (!response.ok) {
-                throw new Error('Failed to apply label');
-            }
-        } catch (error) {
-            console.error('Error applying label:', error);
-        } finally {
-            setApplyingLabelMsgId(null);
+    // Check if container can scroll and show/hide shadows accordingly
+    const checkScroll = () => {
+        if (messagesEndRef.current) {
+            const { scrollTop, scrollHeight, clientHeight } = messagesEndRef.current;
+            
+            // Show top shadow if we're not at the top (more sensitive threshold)
+            setCanScrollUp(scrollTop > 5);
+            
+            // Show bottom shadow if we're not at the bottom (more sensitive threshold)
+            setCanScrollDown(scrollTop + clientHeight < scrollHeight - 5);
         }
     };
 
@@ -93,12 +66,45 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         }
     }, [messages, shouldAutoScroll, messagesEndRef]);
 
+    // Setup scroll listener
+    useEffect(() => {
+        const currentRef = messagesEndRef.current;
+        
+        if (currentRef) {
+            // Initial check
+            checkScroll();
+            
+            // Add scroll listener
+            currentRef.addEventListener('scroll', checkScroll);
+            
+            // Check after content changes
+            const observer = new MutationObserver(checkScroll);
+            observer.observe(currentRef, { childList: true, subtree: true });
+            
+            return () => {
+                currentRef.removeEventListener('scroll', checkScroll);
+                observer.disconnect();
+            };
+        }
+    }, []);
+
+    // Check scroll state on content changes
+    useEffect(() => {
+        checkScroll();
+    }, [messages]);
+
     return (
-        <div className="chat-container">
-            <div ref={messagesEndRef} className="messages-container">
+        <div 
+            ref={containerRef} 
+            className={`chat-container ${canScrollUp ? 'can-scroll-up' : ''} ${canScrollDown ? 'can-scroll-down' : ''}`}
+        >
+            {/* Top shadow indicator */}
+            <div className={`scroll-shadow-top ${canScrollUp ? 'visible' : ''}`} />
+            
+            <div ref={messagesEndRef} className="messages-container" onScroll={checkScroll}>
                 {messages.map(msg => (
                     <div 
-                        key={`${chatId}-${msg.responseId}`} 
+                        key={msg.responseId} 
                         className={`message ${msg.role}`}
                         data-type={msg.type}
                     >
@@ -106,8 +112,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
                             <div className="message-content">
                                 <ReactMarkdown 
                                     remarkPlugins={[
-                                        remarkGfm, 
-                                        [remarkGithub, remarkGithubConfig],
+                                        remarkGfm,
                                         remarkBreaks
                                     ]}
                                 >
@@ -131,63 +136,38 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
                                     )}
                                 </button>
                             </div>
-                            {(msg.type === "update-draft" || msg.type === "add-label") && (
-                                <div className="message-actions">
-                                    {msg.type === "update-draft" && (
-                                        <button
-                                            className={`post-message-button ${postingMsgId === msg.responseId ? 'posting' : ''}`}
-                                            onClick={() => {
-                                                const [owner, repository, issueNumber] = chatId.split('/');
-                                                if (owner && repository && issueNumber) {
-                                                    postDraftResponse(owner, repository, issueNumber, msg.responseId);
-                                                }
-                                            }}
-                                            disabled={postingMsgId !== null}
-                                        >
-                                            {postingMsgId === msg.responseId ? 'Posting...' : 'Post draft'}
-                                        </button>
-                                    )}
-                                    {msg.type === "add-label" && (
-                                        <button
-                                            className={`apply-label-button ${applyingLabelMsgId === msg.responseId ? 'applying' : ''}`}
-                                            onClick={() => {
-                                                const [owner, repository, issueNumber] = chatId.split('/');
-                                                if (owner && repository && issueNumber && msg.data) {
-                                                    applyLabel(owner, repository, issueNumber, msg.data, msg.responseId);
-                                                }
-                                            }}
-                                            disabled={applyingLabelMsgId !== null}
-                                        >
-                                            {applyingLabelMsgId === msg.responseId ? 'Applying...' : 'Apply label'}
-                                        </button>
-                                    )}
-                                </div>
-                            )}
                         </div>
                     </div>
                 ))}
             </div>
-            <form onSubmit={handleSubmit} className="message-form" autoComplete="off">
-                <input
-                    type="text"
-                    value={prompt}
-                    onChange={e => setPrompt(e.target.value)}
-                    placeholder="Enter your message..."
-                    disabled={streamingMessageId ? true : false}
-                    className="message-input"
-                    autoComplete="issues_chat"
-                    name="message-input"
-                />
-                {streamingMessageId ? (
-                    <button type="button" onClick={cancelChat} className="message-button">
-                        Stop
-                    </button>
-                ) : (
-                    <button type="submit" disabled={streamingMessageId ? true : false} className="message-button">
-                        Send
-                    </button>
-                )}
-            </form>
+            
+            {/* Form container with positioned shadow */}
+            <div className="form-container">
+                {/* Bottom shadow indicator positioned above the form */}
+                <div className={`scroll-shadow-bottom ${canScrollDown ? 'visible' : ''}`} />
+                
+                <form onSubmit={handleSubmit} className="message-form" autoComplete="off">
+                    <input
+                        type="text"
+                        value={prompt}
+                        onChange={e => setPrompt(e.target.value)}
+                        placeholder="How can I help you with your travel plans?"
+                        disabled={streamingMessageId ? true : false}
+                        className="message-input"
+                        autoComplete="off"
+                        name="message-input"
+                    />
+                    {streamingMessageId ? (
+                        <button type="button" onClick={cancelChat} className="message-button">
+                            Stop
+                        </button>
+                    ) : (
+                        <button type="submit" disabled={streamingMessageId ? true : false} className="message-button">
+                            Send
+                        </button>
+                    )}
+                </form>
+            </div>
         </div>
     );
 };
