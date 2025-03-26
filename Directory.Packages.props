@@ -28,13 +28,13 @@
     <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="9.3.0-preview.1.25161.3" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.2.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="9.1.0" />
-    <PackageVersion Include="Microsoft.Orleans.Sdk" Version="9.2.0-dev-202503050732" />
-    <PackageVersion Include="Microsoft.Orleans.Client" Version="9.2.0-dev-202503051640" />
-    <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="9.2.0-dev-202503250738" />
-    <PackageVersion Include="Microsoft.Orleans.Reminders" Version="9.2.0-dev-202503250738" />
-    <PackageVersion Include="Microsoft.Orleans.Reminders.AzureStorage" Version="9.2.0-dev-202503250738" />
-    <PackageVersion Include="Microsoft.Orleans.Serialization.SystemTextJson" Version="9.2.0-dev-202503250738" />
-    <PackageVersion Include="Microsoft.Orleans.Server" Version="9.2.0-dev-202503250738" />
+    <PackageVersion Include="Microsoft.Orleans.Sdk" Version="9.2.0-dev-202503261336" />
+    <PackageVersion Include="Microsoft.Orleans.Client" Version="9.2.0-dev-202503261336" />
+    <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="9.2.0-dev-202503261336" />
+    <PackageVersion Include="Microsoft.Orleans.Reminders" Version="9.2.0-dev-202503261336" />
+    <PackageVersion Include="Microsoft.Orleans.Reminders.AzureStorage" Version="9.2.0-dev-202503261336" />
+    <PackageVersion Include="Microsoft.Orleans.Serialization.SystemTextJson" Version="9.2.0-dev-202503261336" />
+    <PackageVersion Include="Microsoft.Orleans.Server" Version="9.2.0-dev-202503261336" />
     <PackageVersion Include="Octokit" Version="14.0.0" />
     <PackageVersion Include="OllamaSharp" Version="5.1.4" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.11.2" />
@@ -42,7 +42,7 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.11.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.11.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.11.1" />
-    <PackageVersion Include="Orleans.Journaling" Version="9.2.0-dev-202503061628" />
+    <PackageVersion Include="Microsoft.Orleans.Journaling" Version="9.2.0-dev-202503261336" />
     <PackageVersion Include="Polly" Version="8.5.2" />
   </ItemGroup>
 </Project>
