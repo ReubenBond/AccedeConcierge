@@ -3,14 +3,12 @@ export interface Message {
     text: string;
     responseId: string;
     type: string;
-    data?: string;
     attachments?: FileAttachment[];
 }
 
 export interface FileAttachment {
-    name: string;
-    url: string;
-    type: string;
+    uri: string;
+    contentType: string;
 }
 
 export interface MessageFragment extends Message {

@@ -131,23 +131,14 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         return (
             <div className="message-attachments">
                 {attachments.map((attachment, index) => (
-                    attachment.type.startsWith('image/') ? (
-                        <div key={index} className="message-image-attachment">
-                            <a href={attachment.url} target="_blank" rel="noopener noreferrer">
-                                <img 
-                                    src={attachment.url} 
-                                    alt={attachment.name} 
-                                    className="attached-image"
-                                />
-                            </a>
-                        </div>
-                    ) : (
-                        <div key={index} className="message-file-attachment">
-                            <a href={attachment.url} target="_blank" rel="noopener noreferrer">
-                                {attachment.name}
-                            </a>
-                        </div>
-                    )
+                    <div key={index} className="message-image-attachment">
+                        <a href={attachment.uri} target="_blank" rel="noopener noreferrer">
+                            <img 
+                                src={attachment.uri} 
+                                className="attached-image"
+                            />
+                        </a>
+                    </div>
                 ))}
             </div>
         );

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { VariableSizeList as List } from 'react-window';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -37,40 +37,62 @@ const renderAttachments = (attachments?: FileAttachment[]) => {
     );
 };
 
-const MessageRow = ({ message, style }: { message: Message; style: React.CSSProperties }) => (
-    <div 
-        style={{ ...style, padding: '10px' }}
-        className={`message ${message.role}`}
-        data-type={message.type}
-    >
-        <div className="message-container">
-            <div className="message-content">
-                <ReactMarkdown 
-                    remarkPlugins={[
-                        remarkGfm,
-                        remarkBreaks
-                    ]}
-                >
-                    {message.text}
-                </ReactMarkdown>
-                {renderAttachments(message.attachments)}
-                {message.role !== 'user' && message.type !== 'status' && (
-                    <button 
-                        className="copy-message-button"
-                        onClick={() => navigator.clipboard.writeText(message.text)}
-                        aria-label="Copy message"
-                        title="Copy to clipboard"
+const MessageRow = ({ message, style }: { message: Message; style: React.CSSProperties }) => {
+    const [copied, setCopied] = useState(false);
+    
+    const copyToClipboard = () => {
+        navigator.clipboard.writeText(message.text).then(
+            () => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+            },
+            (err) => {
+                console.error('Could not copy text: ', err);
+            }
+        );
+    };
+    
+    return (
+        <div 
+            style={{ ...style, padding: '10px' }}
+            className={`message ${message.role}`}
+            data-type={message.type}
+        >
+            <div className="message-container">
+                <div className="message-content">
+                    <ReactMarkdown 
+                        remarkPlugins={[
+                            remarkGfm,
+                            remarkBreaks
+                        ]}
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                        </svg>
-                    </button>
-                )}
+                        {message.text}
+                    </ReactMarkdown>
+                    {renderAttachments(message.attachments)}
+                    {message.role !== 'user' && message.type !== 'status' && (
+                        <button 
+                            className={`copy-message-button ${copied ? 'copied' : ''}`}
+                            onClick={copyToClipboard}
+                            aria-label="Copy message"
+                            title="Copy to clipboard"
+                        >
+                            {copied ? (
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            ) : (
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                            )}
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 function VirtualizedChatList({ messages }: VirtualizedChatListProps) {
     const listRef = useRef<List>(null);
@@ -91,7 +113,11 @@ function VirtualizedChatList({ messages }: VirtualizedChatListProps) {
         const codeBlockHeight = codeBlockCount * 50; // Extra height for code blocks
         
         // Additional height for image attachments
-        const attachmentHeight = msg.attachments?.length ? msg.attachments.length * 200 : 0;
+        const attachmentHeight = msg.attachments?.length 
+            ? msg.attachments.reduce((height, attachment) => {
+                return height + (attachment.type.startsWith('image/') ? 200 : 40);
+              }, 0)
+            : 0;
         
         return Math.max(80, estimatedLines * 24 + 40 + codeBlockHeight + attachmentHeight);
     };

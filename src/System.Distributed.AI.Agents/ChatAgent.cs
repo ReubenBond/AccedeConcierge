@@ -2,6 +2,7 @@
 using Accede.Service.Utilities.Functions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+using Orleans.Concurrency;
 using Orleans.Journaling;
 using System.Collections.ObjectModel;
 using System.Distributed.AI.Agents;
@@ -9,6 +10,7 @@ using System.Runtime.CompilerServices;
 
 namespace Accede.Service.Agents;
 
+[Reentrant]
 public abstract class ChatAgent(
     ILogger logger,
     IChatClient chatClient,
@@ -121,15 +123,10 @@ public abstract class ChatAgent(
                 if (lastMessage is null)
                 {
                     // Give application code a chance to seed the conversation.
-                    bool flowControl = await SeedConversation(chatMessages, shutdownToken, currentChatCancellation);
-                    if (!flowControl)
+                    bool addedNewMessages = await SeedConversation(chatMessages, shutdownToken, currentChatCancellation);
+                    if (!addedNewMessages && pendingMessages.Count == 0)
                     {
-                        continue;
-                    }
-
-                    // Wait for a user message
-                    if (pendingMessages.Count == 0)
-                    {
+                        // Wait for a user message
                         await _pendingMessageEvent.WaitAsync(shutdownToken);
                     }
 

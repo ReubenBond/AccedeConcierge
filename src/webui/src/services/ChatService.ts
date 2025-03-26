@@ -45,14 +45,16 @@ class ChatService {
                     // Handle messages
                     eventSource.addEventListener('message', (event) => {
                         try {
-                            const value = JSON.parse(event.data);
+                            const chatItem = JSON.parse(event.data);
+                            
+                            // Create a MessageFragment from the ChatItem
                             const fragment: MessageFragment = {
-                                role: value.role,
-                                type: value.type,
-                                text: value.text,
-                                isFinal: value.isFinal ?? false,
-                                responseId: value.responseId,
-                                data: value.data
+                                role: chatItem.role,
+                                type: chatItem.type,
+                                text: chatItem.text,
+                                responseId: chatItem.responseId,
+                                isFinal: chatItem.isFinal ?? false,
+                                attachments: chatItem.attachments
                             };
 
                             if (fragment.isFinal) {
@@ -107,45 +109,28 @@ class ChatService {
     }
 
     async sendMessage(text: string, files?: File[]): Promise<void> {
-        if (files && files.length > 0) {
-            const formData = new FormData();
-            formData.append('Text', text);
-            
-            // Append each file to the form data
-            files.forEach(file => {
-                formData.append('file', file);
-            });
-            
-            const response = await fetch(`${this.backendUrl}/chat/messages`, {
-                method: 'POST',
-                body: formData
-            });
+        files = files || [];
+        const formData = new FormData();
+        formData.append('Text', text);
+        
+        // Append each file to the form data
+        files.forEach(file => {
+            formData.append('file', file);
+        });
+        
+        const response = await fetch(`${this.backendUrl}/chat/messages`, {
+            method: 'POST',
+            body: formData
+        });
 
-            if (!response.ok) {
-                let errorMessage;
-                try {
-                    errorMessage = await response.text();
-                } catch (e) {
-                    errorMessage = response.statusText;
-                }
-                throw new Error(`Error sending message with attachments: ${errorMessage}`);
+        if (!response.ok) {
+            let errorMessage;
+            try {
+                errorMessage = await response.text();
+            } catch (e) {
+                errorMessage = response.statusText;
             }
-        } else {
-            const response = await fetch(`${this.backendUrl}/chat/messages`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text })
-            });
-
-            if (!response.ok) {
-                let errorMessage;
-                try {
-                    errorMessage = await response.text();
-                } catch (e) {
-                    errorMessage = response.statusText;
-                }
-                throw new Error(`Error sending message: ${errorMessage}`);
-            }
+            throw new Error(`Error sending message with attachments: ${errorMessage}`);
         }
     }
 

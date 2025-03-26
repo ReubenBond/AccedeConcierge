@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ChatService from '../services/ChatService';
-import { Message } from '../types/ChatTypes';
+import { Message, MessageFragment, FileAttachment } from '../types/ChatTypes';
 import ChatContainer from './ChatContainer';
 import VirtualizedChatList from './VirtualizedChatList';
 import logo from '../logo.svg';
@@ -34,6 +34,10 @@ const App: React.FC = () => {
                 let currentResponseId: string | null = null;
                 
                 for await (const fragment of stream) {
+                    // Skip fragments without a type
+                    if (!fragment.type) continue;
+                    
+                    // Check if this is a new streaming response or continuation
                     if (fragment.responseId && fragment.responseId !== currentResponseId) {
                         currentResponseId = fragment.responseId;
                         if (!fragment.isFinal) {
@@ -47,8 +51,8 @@ const App: React.FC = () => {
                         if (!fragment.text) continue;
                     }
 
-                    const messageId = fragment.responseId;
-                    updateMessageById(messageId, fragment.text, fragment.role, fragment.type, fragment.isFinal, fragment.data);
+                    // Process message based on the ChatItem type
+                    processMessageFragment(fragment);
                 }
             } catch (error) {
                 console.error('Stream error:', error);
@@ -63,7 +67,51 @@ const App: React.FC = () => {
         };
     }, [chatService]);
 
-    const updateMessageById = (id: string, newText: string, role: string, type: string, isFinal: boolean = false, data: string | undefined = undefined) => {
+    // Process message fragments from the stream
+    const processMessageFragment = (fragment: MessageFragment) => {
+        // If it's a user message
+        if (fragment.type === 'user') {
+            updateMessageById(
+                fragment.responseId || `user-${Date.now()}`,
+                fragment.text,
+                'user',
+                fragment.type,
+                true,
+                fragment.attachments
+            );
+        }
+        // If it's an assistant response
+        else if (fragment.type === 'assistant') {
+            updateMessageById(
+                fragment.responseId || `assistant-${Date.now()}`,
+                fragment.text,
+                'assistant',
+                fragment.type,
+                fragment.isFinal || false,
+                fragment.attachments
+            );
+        }
+        // Any other message type
+        else {
+            updateMessageById(
+                fragment.responseId || `${fragment.type}-${Date.now()}`,
+                fragment.text,
+                fragment.role,
+                fragment.type,
+                true,
+                fragment.attachments
+            );
+        }
+    };
+
+    const updateMessageById = (
+        id: string, 
+        newText: string, 
+        role: string, 
+        type: string, 
+        isFinal: boolean = false, 
+        attachments: FileAttachment[] | undefined = undefined
+    ) => {
         const generatingReplyMessageText = 'Generating reply...';
 
         function getMessageText(existingText: string | undefined, newText: string): string {
@@ -79,6 +127,10 @@ const App: React.FC = () => {
                 return existingText.replace(generatingReplyMessageText, '') + newText;
             }
 
+            if (isFinal) {
+                return newText; // For final messages, replace the entire text
+            }
+
             if (newText.startsWith(existingText)) {
                 return newText;
             }
@@ -88,26 +140,35 @@ const App: React.FC = () => {
 
         setMessages(prevMessages => {
             const lastUserMessage = prevMessages.filter(m => m.role === 'user').slice(-1)[0];
-            if (isFinal && lastUserMessage && lastUserMessage.text === newText) {
+            if (isFinal && lastUserMessage && lastUserMessage.text === newText && lastUserMessage.role === role) {
                 return prevMessages;
             }
+            
             const existingMessage = prevMessages.find(msg => msg.responseId === id);
+            
             if (existingMessage) {
                 return prevMessages.map(msg =>
                     msg.responseId === id 
                         ? {
                             ...msg,
-                            text: isFinal ? newText : getMessageText(msg.text, newText),
-                            isLoading: false,
+                            text: getMessageText(msg.text, newText),
+                            isLoading: !isFinal,
                             role: role || msg.role,
                             type: type || msg.type,
-                            data: data || msg.data
+                            attachments: attachments || msg.attachments
                         }
                         : msg
                 );
             } else {
                 return [...prevMessages.filter(msg => msg.responseId !== loadingIndicatorId),
-                { responseId: id, role, text: newText, type: type, isLoading: false, data: data }];
+                { 
+                    responseId: id, 
+                    role, 
+                    text: newText, 
+                    type: type, 
+                    isLoading: !isFinal, 
+                    attachments: attachments 
+                }];
             }
         });
     };
@@ -135,17 +196,17 @@ const App: React.FC = () => {
 
         // Create a message object that includes file attachments if any
         const userMessage: Message = {
-            responseId: `${Date.now()}`, 
+            responseId: `user-${Date.now()}`, 
             role: 'user', 
             text: prompt, 
-            type: 'UserMessage'
+            type: 'user'
         };
 
         setMessages(prevMessages => [...prevMessages, userMessage]);
 
         setMessages(prevMessages => [
             ...prevMessages,
-            { responseId: loadingIndicatorId, role: 'assistant', text: 'Generating reply...', type: 'AssistantResponseFragment' }
+            { responseId: loadingIndicatorId, role: 'assistant', text: 'Generating reply...', type: 'assistant' }
         ]);
 
         try {
