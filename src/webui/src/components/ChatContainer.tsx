@@ -1,8 +1,8 @@
-import React, { useEffect, ReactNode, RefObject, useState, useRef } from 'react';
+import React, { useEffect, ReactNode, RefObject, useState, useRef, ChangeEvent } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
-import { Message } from '../types/ChatTypes';
+import { Message, FileAttachment } from '../types/ChatTypes';
 
 interface ChatContainerProps {
     messages: Message[];
@@ -15,6 +15,8 @@ interface ChatContainerProps {
     shouldAutoScroll: boolean;
     renderMessages: () => ReactNode;
     chatId: string;
+    selectedFiles: File[];
+    setSelectedFiles: (files: File[]) => void;
 }
 
 const ChatContainer: React.FC<ChatContainerProps> = ({
@@ -25,12 +27,15 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
     cancelChat,
     streamingMessageId,
     messagesEndRef,
-    shouldAutoScroll
+    shouldAutoScroll,
+    selectedFiles,
+    setSelectedFiles
 }: ChatContainerProps) => {
     const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
     const [canScrollUp, setCanScrollUp] = useState<boolean>(false);
     const [canScrollDown, setCanScrollDown] = useState<boolean>(false);
     const containerRef = useRef<HTMLDivElement | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Function to copy message text to clipboard
     const copyToClipboard = (text: string, msgId: string) => {
@@ -57,6 +62,32 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
             // Show bottom shadow if we're not at the bottom (more sensitive threshold)
             setCanScrollDown(scrollTop + clientHeight < scrollHeight - 5);
         }
+    };
+
+    // Handle file selection
+    const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            // Convert FileList to array and filter for only image files
+            const fileArray = Array.from(e.target.files).filter(
+                file => file.type.startsWith('image/')
+            );
+            
+            if (fileArray.length > 0) {
+                setSelectedFiles([...selectedFiles, ...fileArray]);
+            }
+        }
+    };
+
+    // Handle click on attachment button
+    const handleAttachmentClick = () => {
+        if (fileInputRef.current) {
+            fileInputRef.current.click();
+        }
+    };
+
+    // Remove file from selected files
+    const removeSelectedFile = (indexToRemove: number) => {
+        setSelectedFiles(selectedFiles.filter((_, index) => index !== indexToRemove));
     };
 
     // Scroll only if near the bottom
@@ -93,6 +124,35 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         checkScroll();
     }, [messages]);
 
+    // Render attachments in message
+    const renderAttachments = (attachments?: FileAttachment[]) => {
+        if (!attachments || attachments.length === 0) return null;
+        
+        return (
+            <div className="message-attachments">
+                {attachments.map((attachment, index) => (
+                    attachment.type.startsWith('image/') ? (
+                        <div key={index} className="message-image-attachment">
+                            <a href={attachment.url} target="_blank" rel="noopener noreferrer">
+                                <img 
+                                    src={attachment.url} 
+                                    alt={attachment.name} 
+                                    className="attached-image"
+                                />
+                            </a>
+                        </div>
+                    ) : (
+                        <div key={index} className="message-file-attachment">
+                            <a href={attachment.url} target="_blank" rel="noopener noreferrer">
+                                {attachment.name}
+                            </a>
+                        </div>
+                    )
+                ))}
+            </div>
+        );
+    };
+
     return (
         <div 
             ref={containerRef} 
@@ -118,6 +178,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
                                 >
                                     {msg.text}
                                 </ReactMarkdown>
+                                {renderAttachments(msg.attachments)}
                                 <button 
                                     className={`copy-message-button ${copiedMsgId === msg.responseId ? 'copied' : ''}`}
                                     onClick={() => copyToClipboard(msg.text, msg.responseId)}
@@ -146,7 +207,52 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
                 {/* Bottom shadow indicator positioned above the form */}
                 <div className={`scroll-shadow-bottom ${canScrollDown ? 'visible' : ''}`} />
                 
+                {/* Show selected file previews */}
+                {selectedFiles.length > 0 && (
+                    <div className="selected-files-container">
+                        {selectedFiles.map((file, index) => (
+                            <div key={index} className="selected-file-preview">
+                                <img 
+                                    src={URL.createObjectURL(file)} 
+                                    alt={file.name}
+                                    className="file-preview-thumbnail" 
+                                />
+                                <button 
+                                    className="remove-file-button"
+                                    onClick={() => removeSelectedFile(index)}
+                                    aria-label="Remove file"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                
                 <form onSubmit={handleSubmit} className="message-form" autoComplete="off">
+                    {/* Hidden file input */}
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileSelect}
+                        style={{ display: 'none' }}
+                        accept="image/*"
+                        multiple
+                    />
+                    
+                    {/* Attachment button */}
+                    <button 
+                        type="button" 
+                        onClick={handleAttachmentClick}
+                        disabled={streamingMessageId ? true : false}
+                        className="attachment-button"
+                        title="Attach image"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                        </svg>
+                    </button>
+                    
                     <input
                         type="text"
                         value={prompt}

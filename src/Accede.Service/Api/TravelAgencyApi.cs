@@ -1,5 +1,9 @@
 using Accede.Service.Agents;
+using Azure.Storage.Blobs;
+using Azure.Storage.Sas;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.AI;
+using System.Distributed.AI.Agents;
 using System.Text.Json;
 
 namespace Accede.Service.Api;
@@ -63,11 +67,23 @@ public static class TravelAgencyApi
             }
         });
 
-        group.MapPost("/messages", async (Prompt prompt, IGrainFactory grains) =>
+        group.MapPost("/messages", async (Prompt prompt, HttpRequest request, [FromKeyedServices("uploads")] BlobServiceClient blobServiceClient, IGrainFactory grains) =>
         {
             var id = UserId;
-            await grains.GetGrain<IUserLiaisonAgent>(id).AddUserMessageAsync(new UserMessage(prompt.Text));
+            var uploads = await GetFileUploads(id, request, blobServiceClient);
+            var grain = grains.GetGrain<IUserLiaisonAgent>(id);
 
+            ChatItem message;
+            if (uploads is {Count: > 0 })
+            {
+                message = new UserMessageWithAttachments(prompt.Text, uploads);
+            }
+            else
+            {
+                message = new UserMessage(prompt.Text);
+            }
+
+            await grain.AddUserMessageAsync(message);
             return Results.Ok();
         });
 
@@ -78,6 +94,37 @@ public static class TravelAgencyApi
 
             return Results.Ok();
         });
+    }
+
+    private static async Task<List<(Uri Uri, string ContentType)>> GetFileUploads(string userId, HttpRequest request, BlobServiceClient blobServiceClient)
+    {
+        List<(Uri Uri, string ContentType)> results = [];
+        if (request.HasFormContentType && request.Form.Files.Count == 0)
+        {
+            foreach (var file in request.Form.Files)
+            {
+                var containerClient = blobServiceClient.GetBlobContainerClient($"user-content/{userId}");
+                await containerClient.CreateIfNotExistsAsync();
+
+                var extension = Path.GetExtension(file.FileName) ?? "jpg";
+                var blobClient = containerClient.GetBlobClient($"{Guid.CreateVersion7():N}.{extension}");
+                await using var stream = file.OpenReadStream();
+                await blobClient.UploadAsync(stream, overwrite: true);
+
+                var sasBuilder = new BlobSasBuilder
+                {
+                    BlobContainerName = containerClient.Name,
+                    BlobName = blobClient.Name,
+                    Resource = "b",
+                };
+
+                sasBuilder.SetPermissions(BlobSasPermissions.Read);
+
+                results.Add((blobClient.GenerateSasUri(sasBuilder), file.ContentType));
+            }
+        }
+
+        return results;
     }
 }
 

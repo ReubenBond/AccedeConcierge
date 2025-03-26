@@ -12,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddKeyedAzureBlobClient("state");
 builder.AddKeyedAzureTableClient("clustering");
+builder.AddKeyedAzureBlobClient("uploads");
 
 builder.UseOrleans(siloBuilder =>
 {

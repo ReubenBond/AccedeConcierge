@@ -11,6 +11,7 @@ const loadingIndicatorId = 'loading-indicator';
 const App: React.FC = () => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [prompt, setPrompt] = useState<string>('');
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
     const [shouldAutoScroll, setShouldAutoScroll] = useState<boolean>(true);
@@ -130,9 +131,16 @@ const App: React.FC = () => {
 
     const handleSubmit = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!prompt.trim() || streamingMessageId) return;
+        if ((!prompt.trim() && selectedFiles.length === 0) || streamingMessageId) return;
 
-        const userMessage = { responseId: `${Date.now()}`, role: 'user', text: prompt, type: 'UserMessage' } as Message;
+        // Create a message object that includes file attachments if any
+        const userMessage: Message = {
+            responseId: `${Date.now()}`, 
+            role: 'user', 
+            text: prompt, 
+            type: 'UserMessage'
+        };
+
         setMessages(prevMessages => [...prevMessages, userMessage]);
 
         setMessages(prevMessages => [
@@ -141,8 +149,9 @@ const App: React.FC = () => {
         ]);
 
         try {
-            await chatService.sendMessage(prompt);
+            await chatService.sendMessage(prompt, selectedFiles);
             setPrompt('');
+            setSelectedFiles([]); // Clear selected files after sending
         } catch (error) {
             console.error('handleSubmit error:', error);
             setMessages(prev =>
@@ -151,7 +160,7 @@ const App: React.FC = () => {
                 )
             );
         }
-    }, [prompt, streamingMessageId, chatService]);
+    }, [prompt, selectedFiles, streamingMessageId, chatService]);
 
     const cancelChat = () => {
         if (!streamingMessageId) return;
@@ -189,6 +198,8 @@ const App: React.FC = () => {
                         messagesEndRef={messagesEndRef}
                         shouldAutoScroll={shouldAutoScroll}
                         chatId=""
+                        selectedFiles={selectedFiles}
+                        setSelectedFiles={setSelectedFiles}
                         renderMessages={() => (
                             <VirtualizedChatList messages={messages} />
                         )}

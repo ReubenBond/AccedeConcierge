@@ -3,11 +3,39 @@ import { VariableSizeList as List } from 'react-window';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
-import { Message } from '../types/ChatTypes';
+import { Message, FileAttachment } from '../types/ChatTypes';
 
 interface VirtualizedChatListProps {
     messages: Message[];
 }
+
+const renderAttachments = (attachments?: FileAttachment[]) => {
+    if (!attachments || attachments.length === 0) return null;
+    
+    return (
+        <div className="message-attachments">
+            {attachments.map((attachment, index) => (
+                attachment.type.startsWith('image/') ? (
+                    <div key={index} className="message-image-attachment">
+                        <a href={attachment.url} target="_blank" rel="noopener noreferrer">
+                            <img 
+                                src={attachment.url} 
+                                alt={attachment.name} 
+                                className="attached-image"
+                            />
+                        </a>
+                    </div>
+                ) : (
+                    <div key={index} className="message-file-attachment">
+                        <a href={attachment.url} target="_blank" rel="noopener noreferrer">
+                            {attachment.name}
+                        </a>
+                    </div>
+                )
+            ))}
+        </div>
+    );
+};
 
 const MessageRow = ({ message, style }: { message: Message; style: React.CSSProperties }) => (
     <div 
@@ -25,6 +53,7 @@ const MessageRow = ({ message, style }: { message: Message; style: React.CSSProp
                 >
                     {message.text}
                 </ReactMarkdown>
+                {renderAttachments(message.attachments)}
                 {message.role !== 'user' && message.type !== 'status' && (
                     <button 
                         className="copy-message-button"
@@ -61,7 +90,10 @@ function VirtualizedChatList({ messages }: VirtualizedChatListProps) {
         const codeBlockCount = (msg.text.match(/```/g) || []).length / 2;
         const codeBlockHeight = codeBlockCount * 50; // Extra height for code blocks
         
-        return Math.max(80, estimatedLines * 24 + 40 + codeBlockHeight);
+        // Additional height for image attachments
+        const attachmentHeight = msg.attachments?.length ? msg.attachments.length * 200 : 0;
+        
+        return Math.max(80, estimatedLines * 24 + 40 + codeBlockHeight + attachmentHeight);
     };
 
     // Scroll to bottom when messages change

@@ -36,6 +36,16 @@ public class UserMessage(string text) : ChatItem(text)
 }
 
 [GenerateSerializer]
+public class UserMessageWithAttachments(string text, List<(Uri Uri, string ContentType)> attachments) : ChatItem(text)
+{
+    public override string Type => "user";
+    public override ChatRole Role => ChatRole.User;
+    public override bool IsUserVisible => true;
+    public List<(Uri Uri, string ContentType)> Files { get; } = attachments;
+    public override ChatMessage? ToChatMessage() => new ChatMessage(ChatRole.User, [new TextContent(Text), ..Files.Select(f => new UriContent(f.Uri, f.ContentType))]);
+}
+
+[GenerateSerializer]
 public class UpdateDraftResponseMessage(string text) : ChatItem(text)
 {
     public override string Type => "update-draft";

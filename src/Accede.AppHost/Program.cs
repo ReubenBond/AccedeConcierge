@@ -29,7 +29,8 @@ var backend = builder.AddProject<Projects.Accede_Service>("service")
     .WaitFor(smallModel)
     .WaitFor(largeModel)
     .WithReference(orleans)
-    .WithReference(azureStorage.AddBlobs("state"));
+    .WithReference(azureStorage.AddBlobs("state"))
+    .WithReference(azureStorage.AddBlobs("uploads"));
 
 builder.AddNpmApp("webui", "../webui")
        .WithNpmPackageInstallation()

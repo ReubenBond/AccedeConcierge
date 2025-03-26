@@ -106,21 +106,46 @@ class ChatService {
         }
     }
 
-    async sendMessage(text: string): Promise<void> {
-        const response = await fetch(`${this.backendUrl}/chat/messages`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text })
-        });
+    async sendMessage(text: string, files?: File[]): Promise<void> {
+        if (files && files.length > 0) {
+            const formData = new FormData();
+            formData.append('Text', text);
+            
+            // Append each file to the form data
+            files.forEach(file => {
+                formData.append('file', file);
+            });
+            
+            const response = await fetch(`${this.backendUrl}/chat/messages`, {
+                method: 'POST',
+                body: formData
+            });
 
-        if (!response.ok) {
-            let errorMessage;
-            try {
-                errorMessage = await response.text();
-            } catch (e) {
-                errorMessage = response.statusText;
+            if (!response.ok) {
+                let errorMessage;
+                try {
+                    errorMessage = await response.text();
+                } catch (e) {
+                    errorMessage = response.statusText;
+                }
+                throw new Error(`Error sending message with attachments: ${errorMessage}`);
             }
-            throw new Error(`Error sending message: ${errorMessage}`);
+        } else {
+            const response = await fetch(`${this.backendUrl}/chat/messages`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            });
+
+            if (!response.ok) {
+                let errorMessage;
+                try {
+                    errorMessage = await response.text();
+                } catch (e) {
+                    errorMessage = response.statusText;
+                }
+                throw new Error(`Error sending message: ${errorMessage}`);
+            }
         }
     }
 
