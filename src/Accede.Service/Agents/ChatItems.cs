@@ -6,24 +6,8 @@ namespace Accede.Service.Agents;
 [GenerateSerializer]
 public class SystemPrompt(string text) : ChatItem(text)
 {
-    public override string Type => nameof(SystemPrompt);
+    public override string Type => "system-prompt";
     public override ChatRole Role => ChatRole.System;
-    public override bool IsUserVisible => false;
-}
-
-[GenerateSerializer]
-public class ModelContext(string text) : ChatItem(text)
-{
-    public override string Type => "model-context";
-    public override ChatRole Role => ChatRole.User;
-    public override bool IsUserVisible => false;
-}
-
-[GenerateSerializer]
-public class InstructionMessage(string text) : ChatItem(text)
-{
-    public override string Type => "instruction";
-    public override ChatRole Role => ChatRole.User;
     public override bool IsUserVisible => false;
 }
 
@@ -33,54 +17,16 @@ public class UserMessage(string text) : ChatItem(text)
     public override string Type => "user";
     public override ChatRole Role => ChatRole.User;
     public override bool IsUserVisible => true;
-}
-
-[GenerateSerializer]
-public class UserMessageWithAttachments(string text, List<(Uri Uri, string ContentType)> attachments) : ChatItem(text)
-{
-    public override string Type => "user";
-    public override ChatRole Role => ChatRole.User;
-    public override bool IsUserVisible => true;
-    public List<(Uri Uri, string ContentType)> Files { get; } = attachments;
-    public override ChatMessage? ToChatMessage() => new ChatMessage(ChatRole.User, [new TextContent(Text), ..Files.Select(f => new UriContent(f.Uri, f.ContentType))]);
-}
-
-[GenerateSerializer]
-public class UpdateDraftResponseMessage(string text) : ChatItem(text)
-{
-    public override string Type => "update-draft";
-    public override ChatRole Role => ChatRole.Assistant;
-    public override bool IsUserVisible => true;
-    public override ChatMessage? ToChatMessage() => null;
-}
-
-[GenerateSerializer]
-public class AddLabelMessage(string label) : ChatItem($"Will add label '{label}' to the issue.")
-{
-    [Id(0)]
-    public string Label { get; } = label;
-    public override string Type => "add-label";
-    public override ChatRole Role => ChatRole.Assistant;
-    public override bool IsUserVisible => true;
-    public override ChatMessage? ToChatMessage() => null;
-}
-
-[GenerateSerializer]
-public class StatusChatItem(string text) : ChatItem(text)
-{
-    public override string Type => "status";
-    public override ChatRole Role => ChatRole.Assistant;
-    public override bool IsUserVisible => true;
-    public override ChatMessage? ToChatMessage() => null;
-}
-[GenerateSerializer]
-public class AgentMessage(string agentName, string text) : ChatItem(text)
-{
-    public override string Type => nameof(AgentMessage);
 
     [Id(0)]
-    public string AgentName { get; } = agentName;
+    public List<UriAttachment>? Attachments { get; init; }
 
-    public override ChatRole Role => ChatRole.User;
-    public override bool IsUserVisible => true;
+    public override ChatMessage? ToChatMessage() => Attachments switch
+    {
+        { Count: > 0 } attachments => new ChatMessage(ChatRole.User, [new TextContent(Text), .. attachments.Select(f => new UriContent(f.Uri, f.ContentType))]),
+        _ => base.ToChatMessage(),
+    };
 }
+
+[GenerateSerializer]
+public readonly record struct UriAttachment(Uri Uri, string ContentType);

@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.AI;
+using System.Text.Json.Serialization;
 
 namespace System.Distributed.AI.Agents;
 
@@ -12,16 +13,19 @@ public abstract class ChatItem(string text)
 
     public abstract string Type { get; }
 
+    [JsonIgnore]
     public abstract bool IsUserVisible { get; }
 
     public virtual ChatMessage? ToChatMessage() => new ChatMessage(Role, Text);
+
+    [JsonIgnore]
     internal bool IsUserMessage => Role == ChatRole.User;
 }
 
 [GenerateSerializer]
-public class AssistantResponseFragment(string text) : ChatItem(text)
+public class AssistantResponse(string text) : ChatItem(text)
 {
-    public override string Type => nameof(AssistantResponseFragment);
+    public override string Type => "assistant";
 
     [Id(0)]
     public required string? ResponseId { get; set; }
@@ -30,6 +34,3 @@ public class AssistantResponseFragment(string text) : ChatItem(text)
     public override ChatRole Role => ChatRole.Assistant;
     public override bool IsUserVisible => true;
 }
-
-[GenerateSerializer]
-public record ClientMessageFragment(string Role, string Text, string? ResponseId, string Type, bool IsFinal);

@@ -58,6 +58,6 @@ internal interface IUserLiaisonAgent : IGrainWithStringKey
     ValueTask<bool> DeleteAsync(CancellationToken cancellationToken = default);
     ValueTask<List<ChatItem>> GetMessagesAsync(CancellationToken cancellationToken = default);
     IAsyncEnumerable<ChatItem> GetChatItemsAsync(CancellationToken cancellationToken = default);
-    IAsyncEnumerable<ClientMessageFragment> SubscribeAsync(int startIndex, CancellationToken cancellationToken = default);
+    IAsyncEnumerable<ChatItem> SubscribeAsync(int startIndex, CancellationToken cancellationToken = default);
 }
 

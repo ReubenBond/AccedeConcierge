@@ -71,7 +71,7 @@ public abstract class ChatAgent(
             return;
         }
 
-        if (lastItem is AssistantResponseFragment { IsFinal: false })
+        if (lastItem is AssistantResponse { IsFinal: false })
         {
             // A response is currently being streamed from the language model.
             pendingMessages.Enqueue(item);
@@ -143,7 +143,7 @@ public abstract class ChatAgent(
 
                 var lastResponseFragment = conversationHistory switch
                 {
-                    { Count: > 0 } => conversationHistory[^1] as AssistantResponseFragment,
+                    { Count: > 0 } => conversationHistory[^1] as AssistantResponse,
                     _ => null,
                 };
 
@@ -154,7 +154,7 @@ public abstract class ChatAgent(
                     if (response.ResponseId is { Length: > 0 } responseId && lastResponseFragment is { } && responseId.Equals(lastResponseFragment.ResponseId))
                     {
                         // Update to the current message fragment.
-                        conversationHistory[^1] = new AssistantResponseFragment(lastResponseFragment.Text + response.Text)
+                        conversationHistory[^1] = new AssistantResponse(lastResponseFragment.Text + response.Text)
                         {
                             ResponseId = response.ResponseId,
                             IsFinal = false
@@ -165,7 +165,7 @@ public abstract class ChatAgent(
                         // Seal the previous message.
                         if (lastResponseFragment is not null)
                         {
-                            conversationHistory[^1] = new AssistantResponseFragment(lastResponseFragment.Text)
+                            conversationHistory[^1] = new AssistantResponse(lastResponseFragment.Text)
                             {
                                 ResponseId = lastResponseFragment.ResponseId,
                                 IsFinal = true
@@ -173,20 +173,20 @@ public abstract class ChatAgent(
                         }
 
                         // New message.
-                        conversationHistory.Add(new AssistantResponseFragment(response.Text ?? "")
+                        conversationHistory.Add(new AssistantResponse(response.Text ?? "")
                         {
                             ResponseId = response.ResponseId,
                             IsFinal = false
                         });
                     }
 
-                    lastResponseFragment = conversationHistory[^1] as AssistantResponseFragment;
+                    lastResponseFragment = conversationHistory[^1] as AssistantResponse;
                     _historyUpdatedEvent.SignalAndReset();
                 }
 
                 if (lastResponseFragment is not null)
                 {
-                    conversationHistory[^1] = new AssistantResponseFragment(lastResponseFragment.Text)
+                    conversationHistory[^1] = new AssistantResponse(lastResponseFragment.Text)
                     {
                         ResponseId = lastResponseFragment.ResponseId,
                         IsFinal = true
@@ -276,7 +276,7 @@ public abstract class ChatAgent(
 
     public ValueTask<List<ChatItem>> GetMessagesAsync(CancellationToken cancellationToken = default) => new([.. conversationHistory.Where(msg => msg.IsUserVisible)]);
 
-    public async IAsyncEnumerable<ClientMessageFragment> SubscribeAsync(int startIndex = 0, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<ChatItem> SubscribeAsync(int startIndex = 0, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var i = startIndex;
         string? partialMessageFragment = null;
@@ -299,27 +299,32 @@ public abstract class ChatAgent(
             }
 
             // This is the final update for this message if there are subsequent messages.
-            var isFinal = (message as AssistantResponseFragment)?.IsFinal ?? true;
-            var responseId = (message as AssistantResponseFragment)?.ResponseId ?? $"msg-{i}";
+            var isFinal = (message as AssistantResponse)?.IsFinal ?? true;
+            var responseId = (message as AssistantResponse)?.ResponseId ?? $"msg-{i}";
 
-            var updateText = isFinal switch
+            if (message is AssistantResponse { IsFinal: false } fragment)
             {
-                true => message.Text,
-                false => message.Text[(partialMessageFragment?.Length ?? 0)..]
-            };
+                yield return new AssistantResponse(fragment.Text[(partialMessageFragment?.Length ?? 0)..])
+                {
+                    ResponseId = fragment.ResponseId,
+                    IsFinal = false
+                };
 
-            logger.LogInformation("{IsFinal}: {UpdateText}", isFinal, updateText);
-            yield return new ClientMessageFragment(message.Role.Value, updateText, responseId, Type: message.Type, IsFinal: isFinal);
+                partialMessageFragment = message.Text;
+            }
+            else
+            {
+                partialMessageFragment = null;
+                yield return message;
+            }
 
             // If there is a subsequent message, advance, otherwise wait for an update.
             if (conversationHistory.Count > i + 1)
             {
-                partialMessageFragment = null;
                 ++i;
             }
             else
             {
-                partialMessageFragment = message.Text;
                 await _historyUpdatedEvent.WaitAsync(cancellationToken);
             }
         }
@@ -340,7 +345,7 @@ public abstract class ChatAgent(
             var message = conversationHistory[i];
 
             // Wait for whole responses.
-            if (message is AssistantResponseFragment { IsFinal: false } && i + 1 == conversationHistory.Count)
+            if (message is AssistantResponse { IsFinal: false } && i + 1 == conversationHistory.Count)
             {
                 continue;
             }

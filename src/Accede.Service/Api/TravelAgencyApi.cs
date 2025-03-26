@@ -67,23 +67,16 @@ public static class TravelAgencyApi
             }
         });
 
-        group.MapPost("/messages", async (Prompt prompt, HttpRequest request, [FromKeyedServices("uploads")] BlobServiceClient blobServiceClient, IGrainFactory grains) =>
+        group.MapPost("/messages", async (HttpRequest request, [FromKeyedServices("uploads")] BlobServiceClient blobServiceClient, IGrainFactory grains) =>
         {
             var id = UserId;
             var uploads = await GetFileUploads(id, request, blobServiceClient);
             var grain = grains.GetGrain<IUserLiaisonAgent>(id);
-
-            ChatItem message;
-            if (uploads is {Count: > 0 })
-            {
-                message = new UserMessageWithAttachments(prompt.Text, uploads);
-            }
-            else
-            {
-                message = new UserMessage(prompt.Text);
-            }
-
-            await grain.AddUserMessageAsync(message);
+            var text = request.Form["Text"].FirstOrDefault() ?? "";
+            await grain.AddUserMessageAsync(new UserMessage(text)
+                {
+                    Attachments = uploads
+                });
             return Results.Ok();
         });
 
@@ -96,18 +89,18 @@ public static class TravelAgencyApi
         });
     }
 
-    private static async Task<List<(Uri Uri, string ContentType)>> GetFileUploads(string userId, HttpRequest request, BlobServiceClient blobServiceClient)
+    private static async Task<List<UriAttachment>> GetFileUploads(string userId, HttpRequest request, BlobServiceClient blobServiceClient)
     {
-        List<(Uri Uri, string ContentType)> results = [];
-        if (request.HasFormContentType && request.Form.Files.Count == 0)
+        List<UriAttachment> results = [];
+        if (request.HasFormContentType && request.Form.Files.Count > 0)
         {
             foreach (var file in request.Form.Files)
             {
-                var containerClient = blobServiceClient.GetBlobContainerClient($"user-content/{userId}");
+                var containerClient = blobServiceClient.GetBlobContainerClient("user-content");
                 await containerClient.CreateIfNotExistsAsync();
 
                 var extension = Path.GetExtension(file.FileName) ?? "jpg";
-                var blobClient = containerClient.GetBlobClient($"{Guid.CreateVersion7():N}.{extension}");
+                var blobClient = containerClient.GetBlobClient($"{userId}/{Guid.CreateVersion7():N}.{extension}");
                 await using var stream = file.OpenReadStream();
                 await blobClient.UploadAsync(stream, overwrite: true);
 
@@ -116,16 +109,15 @@ public static class TravelAgencyApi
                     BlobContainerName = containerClient.Name,
                     BlobName = blobClient.Name,
                     Resource = "b",
+                    ExpiresOn = DateTimeOffset.MaxValue,
                 };
 
                 sasBuilder.SetPermissions(BlobSasPermissions.Read);
 
-                results.Add((blobClient.GenerateSasUri(sasBuilder), file.ContentType));
+                results.Add(new(blobClient.GenerateSasUri(sasBuilder), file.ContentType));
             }
         }
 
         return results;
     }
 }
-
-public record Prompt(string Text);
