@@ -14,6 +14,7 @@ namespace Accede.Service.Utilities.Functions;
 
 internal sealed class AgentAIFunction : AIFunction
 {
+    private static readonly SubscribeOrPollOptions SubscribeOrPollOptions = new SubscribeOrPollOptions { PollTimeout = TimeSpan.FromSeconds(20) };
     public static AgentAIFunction Create(IGrainContext grainContext, AgentToolDescriptor functionDescriptor, AgentToolOptions options)
     {
         return new(functionDescriptor, grainContext, options);
@@ -29,12 +30,6 @@ internal sealed class AgentAIFunction : AIFunction
         }
 
         AgentToolDescriptor functionDescriptor = AgentToolDescriptor.GetOrCreate(method, name, options);
-
-        // Discover all descriptors
-        // Register all descriptors in the grain context's AgentToolRegistry
-
-        // If the descriptor describes a DurableTask, create a DurableTaskAIFunction descriptor which takes that descriptor
-
         return new(functionDescriptor, grainContext, options);
     }
 
@@ -72,18 +67,16 @@ internal sealed class AgentAIFunction : AIFunction
             var taskId = TaskId.Create(DurableFunctionInvokingChatClient.CurrentContext!.CallContent.CallId);
 
             var scheduler = GrainContext.GetComponent<IDurableTaskGrainExtension>()!;
+
+            // TODO: Use Polly for RPC resilience
             var response = await scheduler.ScheduleAsync(taskId, request, cancellationToken);
-            var pollOptions = new SubscribeOrPollOptions { PollTimeout = TimeSpan.FromSeconds(20) };
-            while (true) {
-
-                if (response.IsCompleted)
-                {
-                    returnValue = response.Result;
-                    break;
-                }
-
-                response = await scheduler.SubscribeOrPollAsync(taskId, pollOptions, cancellationToken);
+            while (!response.IsCompleted)
+            {
+                // TODO: Use Polly for RPC resilience
+                response = await scheduler.SubscribeOrPollAsync(taskId, SubscribeOrPollOptions, cancellationToken);
             }
+
+            returnValue = response.Result;
         }
         else
         {

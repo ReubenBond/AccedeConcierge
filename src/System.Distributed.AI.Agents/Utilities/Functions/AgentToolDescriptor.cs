@@ -271,23 +271,9 @@ internal sealed class AgentToolDescriptor
         // DurableTask
         if (returnType == typeof(DurableTask))
         {
-            return async static (result, cancellationToken) =>
+            return static (result, cancellationToken) =>
             {
-                var durableTask = (DurableTask)ThrowIfNullResult(result);
-                var context = DurableFunctionInvokingChatClient.CurrentContext;
-                var callId = context!.CallContent.CallId;
-                ScheduledTask scheduledTask;
-                if (callId is null)
-                {
-                    scheduledTask = await durableTask.ScheduleAsync(cancellationToken).ConfigureAwait(true);
-                }
-                else
-                {
-                    scheduledTask = await durableTask.ScheduleAsync(callId, cancellationToken).ConfigureAwait(true);
-                }
-
-                await scheduledTask.WaitAsync(cancellationToken);
-                return null;
+                return Task.FromResult<object?>(null);
             };
         }
 
@@ -325,24 +311,9 @@ internal sealed class AgentToolDescriptor
             if (returnType.GetGenericTypeDefinition() == typeof(DurableTask<>))
             {
                 returnTypeInfo = serializerOptions.GetTypeInfo(returnType.GetGenericArguments()[0]);
-                return async (taskObj, cancellationToken) =>
+                return async (result, cancellationToken) =>
                 {
-                    var durableTask = (DurableTask)ThrowIfNullResult(taskObj);
-
-                    var context = DurableFunctionInvokingChatClient.CurrentContext;
-                    var callId = context!.CallContent.CallId;
-                    ScheduledTask scheduledTask;
-                    if (callId is null)
-                    {
-                        scheduledTask = await durableTask.ScheduleAsync(cancellationToken).ConfigureAwait(true);
-                    }
-                    else
-                    {
-                        scheduledTask = await durableTask.ScheduleAsync(callId, cancellationToken).ConfigureAwait(true);
-                    }
-
-                    var response = await scheduledTask.GetResponseAsync(cancellationToken);
-                    return await SerializeResultAsync(response.Result, returnTypeInfo, cancellationToken).ConfigureAwait(false);
+                    return await SerializeResultAsync(result, returnTypeInfo, cancellationToken).ConfigureAwait(false);
                 };
             }
         }
