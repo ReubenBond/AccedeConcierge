@@ -37,7 +37,7 @@ public static class TravelAgencyApi
                 await response.Body.FlushAsync(cancellationToken);
                 
                 var grain = grains.GetGrain<IUserLiaisonAgent>(UserId);
-                await foreach (var message in grain.SubscribeAsync(startIndex ?? 0, cancellationToken))
+                await foreach (var message in grain.WatchChatHistoryAsync(startIndex ?? 0, cancellationToken))
                 {
                     string serializedMessage = JsonSerializer.Serialize(message, message.GetType(), JsonSerializerOptions.Web);
                     await response.WriteAsync($"data: {serializedMessage}\n\n", cancellationToken);

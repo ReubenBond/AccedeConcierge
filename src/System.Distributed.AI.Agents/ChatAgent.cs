@@ -3,8 +3,8 @@ using Accede.Service.Utilities.Functions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Orleans.Concurrency;
-using Orleans.DurableTasks;
 using Orleans.Journaling;
+using System.ClientModel;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Distributed.AI.Agents;
@@ -138,7 +138,7 @@ public abstract class ChatAgent : DurableGrain
                     {
                         lastMessage = pendingMessage;
                     }
-                    
+
                     conversationHistory.Add(pendingMessage);
                 }
 
@@ -208,6 +208,13 @@ public abstract class ChatAgent : DurableGrain
             catch (Exception exception)
             {
                 logger.LogError(exception, "Error submitting chat messages.");
+                if (exception is ClientResultException clientResultException)
+                {
+                    if (clientResultException.Status == 400)
+                    {
+                        await QuarantineLastMessage(chatMessages, clientResultException);
+                    }
+                }
             }
         }
 
@@ -223,6 +230,22 @@ public abstract class ChatAgent : DurableGrain
             if (response.ToChatMessage() is { } msg)
             {
                 chatMessages.Add(msg);
+            }
+        }
+
+        async Task QuarantineLastMessage(List<ChatMessage> chatMessages, ClientResultException clientResultException)
+        {
+            try
+            {
+                // Quarantine the message in a dead letter queue.
+                var failingItem = conversationHistory.Last();
+                conversationHistory[^1] = new QuarantinedMessage($"The message could not be processed: {clientResultException.Message}", failingItem);
+                chatMessages.RemoveAt(chatMessages.Count - 1);
+                await WriteStateAsync(shutdownToken);
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(exception, "Error quarantining chat message.");
             }
         }
     }
@@ -279,6 +302,7 @@ public abstract class ChatAgent : DurableGrain
 
     public async ValueTask CancelAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var currentCts = _currentChatCts;
         _currentChatCts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownCts.Token);
         if (currentCts != null)
@@ -297,14 +321,20 @@ public abstract class ChatAgent : DurableGrain
 
     public ValueTask<List<ChatItem>> GetMessagesAsync(CancellationToken cancellationToken = default) => new([.. conversationHistory.Where(msg => msg.IsUserVisible)]);
 
-    public async IAsyncEnumerable<ChatItem> SubscribeAsync(int startIndex = 0, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public IAsyncEnumerable<ChatItem> WatchChatHistoryAsync(int startIndex = 0, CancellationToken cancellationToken = default)
+        => WatchChatHistoryAsync(startIndex, includePartialResponses: true, cancellationToken);
+
+    private async IAsyncEnumerable<ChatItem> WatchChatHistoryAsync(int startIndex = 0, bool includePartialResponses = true, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var i = startIndex;
         string? lastFragment = null;
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (i == conversationHistory.Count && _streamingFragment is { } fragment &&
+
+            // Account for partial responses.
+            if (includePartialResponses &&
+                i == conversationHistory.Count && _streamingFragment is { } fragment &&
                 (lastFragment is null || fragment.Text.Length > lastFragment.Length))
             {
                 var partialResponse = new AssistantResponse(fragment.Text[(lastFragment?.Length ?? 0)..])
@@ -334,31 +364,6 @@ public abstract class ChatAgent : DurableGrain
             }
 
             yield return message;
-        }
-    }
-
-    public async IAsyncEnumerable<ChatItem> GetChatItemsAsync([EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        var i = 0;
-        while (true)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (i >= conversationHistory.Count)
-            {
-                await _historyUpdatedEvent.WaitAsync(cancellationToken);
-                continue;
-            }
-
-            var message = conversationHistory[i];
-
-            // Wait for whole responses.
-            if (message is AssistantResponse { IsFinal: false } && i + 1 == conversationHistory.Count)
-            {
-                continue;
-            }
-
-            yield return message;
-            ++i;
         }
     }
 }

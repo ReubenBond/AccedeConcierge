@@ -34,3 +34,15 @@ public class AssistantResponse(string text) : ChatItem(text)
     public override ChatRole Role => ChatRole.Assistant;
     public override bool IsUserVisible => true;
 }
+
+[GenerateSerializer]
+public class QuarantinedMessage(string text, ChatItem innerItem) : ChatItem(text)
+{
+    public override string Type => "quarantined";
+
+    [Id(0)]
+    public ChatItem InnerItem { get; init; } = innerItem;
+    public override ChatRole Role => InnerItem.Role;
+    public override bool IsUserVisible => true;
+    public override ChatMessage? ToChatMessage() => null;
+}

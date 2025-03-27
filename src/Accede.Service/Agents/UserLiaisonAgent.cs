@@ -46,6 +46,12 @@ internal sealed partial class UserLiaisonAgent(
     {
         return $"Hello, {userName}! How can I help you today?";
     }
+
+    [Tool, Description("Clears all stored history and resets the chat state.")]
+    public async Task ResetAsync(CancellationToken cancellationToken)
+    {
+        await base.DeleteAsync(cancellationToken);
+    }
 }
 
 internal interface IUserLiaisonAgent : IGrainWithStringKey
@@ -54,6 +60,6 @@ internal interface IUserLiaisonAgent : IGrainWithStringKey
     ValueTask CancelAsync(CancellationToken cancellationToken = default);
     ValueTask<bool> DeleteAsync(CancellationToken cancellationToken = default);
     ValueTask<List<ChatItem>> GetMessagesAsync(CancellationToken cancellationToken = default);
-    IAsyncEnumerable<ChatItem> SubscribeAsync(int startIndex, CancellationToken cancellationToken = default);
+    IAsyncEnumerable<ChatItem> WatchChatHistoryAsync(int startIndex, CancellationToken cancellationToken = default);
 }
 
