@@ -73,7 +73,7 @@ public static class TravelAgencyApi
             var uploads = await GetFileUploads(id, request, blobServiceClient);
             var grain = grains.GetGrain<IUserLiaisonAgent>(id);
             var text = request.Form["Text"].FirstOrDefault() ?? "";
-            await grain.AddUserMessageAsync(new UserMessage(text)
+            await grain.PostMessageAsync(new UserMessage(text)
                 {
                     Attachments = uploads
                 });

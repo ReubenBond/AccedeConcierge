@@ -1,6 +1,7 @@
 ﻿using Accede.Service.Utilities;
 using Accede.Service.Utilities.Functions;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Orleans.Concurrency;
 using Orleans.Journaling;
@@ -18,10 +19,10 @@ public abstract class ChatAgent : DurableGrain
     private readonly CancellationTokenSource _shutdownCts = new();
     private readonly AsyncManualResetEvent _pendingMessageEvent = new();
     private readonly AsyncManualResetEvent _historyUpdatedEvent = new();
-    private readonly ILogger logger;
-    private readonly IChatClient chatClient;
-    private readonly IDurableQueue<ChatItem> pendingMessages;
-    private readonly IDurableList<ChatItem> conversationHistory;
+    private readonly ILogger _logger;
+    private readonly IChatClient _chatClient;
+    private readonly IDurableQueue<ChatItem> _pendingMessages;
+    private readonly IDurableList<ChatItem> _conversationHistory;
     private readonly AgentToolRegistry _toolRegistry;
     private AssistantResponse? _streamingFragment;
     private AgentToolOptions? _functionFactoryOptions;
@@ -30,14 +31,12 @@ public abstract class ChatAgent : DurableGrain
 
     public ChatAgent(
         ILogger logger,
-        IChatClient chatClient,
-        IDurableQueue<ChatItem> pendingMessages,
-        IDurableList<ChatItem> conversationHistory)
+        IChatClient chatClient)
     {
-        this.logger = logger;
-        this.chatClient = chatClient;
-        this.pendingMessages = pendingMessages;
-        this.conversationHistory = conversationHistory;
+        _logger = logger;
+        _chatClient = chatClient;
+        _pendingMessages = ServiceProvider.GetRequiredKeyedService<IDurableQueue<ChatItem>>("pending");
+        _conversationHistory = ServiceProvider.GetRequiredKeyedService<IDurableList<ChatItem>>("conversation-history");
 
         // Register tools
         _toolRegistry = AgentToolRegistry.Create(GetType(), GrainContext, FunctionFactoryOptions);
@@ -53,7 +52,7 @@ public abstract class ChatAgent : DurableGrain
     protected abstract Task<List<ChatItem>> OnChatCreatedAsync(CancellationToken cancellationToken);
     protected abstract Task<List<ChatItem>> OnChatIdleAsync(CancellationToken cancellationToken);
     protected virtual ChatOptions ChatOptions { get; }
-    protected IReadOnlyList<ChatItem> ConversationHistory => new ReadOnlyCollection<ChatItem>(conversationHistory);
+    protected IReadOnlyList<ChatItem> ConversationHistory => new ReadOnlyCollection<ChatItem>(_conversationHistory);
 
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
@@ -76,20 +75,20 @@ public abstract class ChatAgent : DurableGrain
 
     protected async ValueTask AddMessageAsync(ChatItem message, CancellationToken cancellationToken = default)
     {
-        if (pendingMessages.LastOrDefault() is { } lastMessage && lastMessage.Text == message.Text)
+        if (_pendingMessages.LastOrDefault() is { } lastMessage && lastMessage.Text == message.Text)
         {
             // Skip unsent dupes
             return;
         }
 
-        pendingMessages.Enqueue(message);
+        _pendingMessages.Enqueue(message);
         await WriteStateAsync(cancellationToken);
         _pendingMessageEvent.SignalAndReset();
     }
 
     protected void AddStatusMessage(ChatItem item)
     {
-        var lastItem = conversationHistory.LastOrDefault();
+        var lastItem = _conversationHistory.LastOrDefault();
         if (lastItem is { Text: { } text } && text == item.Text)
         {
             return;
@@ -98,12 +97,12 @@ public abstract class ChatAgent : DurableGrain
         if (lastItem is AssistantResponse { IsFinal: false })
         {
             // A response is currently being streamed from the language model.
-            pendingMessages.Enqueue(item);
+            _pendingMessages.Enqueue(item);
             _pendingMessageEvent.SignalAndReset();
         }
         else
         {
-            conversationHistory.Add(item);
+            _conversationHistory.Add(item);
             _historyUpdatedEvent.SignalAndReset();
         }
     }
@@ -111,8 +110,8 @@ public abstract class ChatAgent : DurableGrain
     private async Task PumpChatCompletionStream(CancellationToken shutdownToken)
     {
         await Task.Yield();
-        List<ChatMessage> chatMessages = new(conversationHistory.Count);
-        foreach (var message in conversationHistory)
+        List<ChatMessage> chatMessages = new(_conversationHistory.Count);
+        foreach (var message in _conversationHistory)
         {
             if (message.ToChatMessage() is { } chatMessage)
             {
@@ -128,25 +127,25 @@ public abstract class ChatAgent : DurableGrain
             {
                 // Completion always starts with a new, unanswered user message.
                 ChatItem? lastMessage = null;
-                if (conversationHistory.LastOrDefault() is { IsUserMessage: true } lastHistoryMessage)
+                if (_conversationHistory.LastOrDefault() is { IsUserMessage: true } lastHistoryMessage)
                 {
                     lastMessage = lastHistoryMessage;
                 }
-                else if (pendingMessages.TryDequeue(out var pendingMessage))
+                else if (_pendingMessages.TryDequeue(out var pendingMessage))
                 {
                     if (pendingMessage.IsUserMessage)
                     {
                         lastMessage = pendingMessage;
                     }
 
-                    conversationHistory.Add(pendingMessage);
+                    _conversationHistory.Add(pendingMessage);
                 }
 
                 if (lastMessage is null)
                 {
                     // Give application code a chance to seed the conversation.
                     bool addedNewMessages = await SeedConversation(chatMessages, shutdownToken, currentChatCancellation);
-                    if (!addedNewMessages && pendingMessages.Count == 0)
+                    if (!addedNewMessages && _pendingMessages.Count == 0)
                     {
                         // Wait for a user message
                         await _pendingMessageEvent.WaitAsync(shutdownToken);
@@ -161,7 +160,7 @@ public abstract class ChatAgent : DurableGrain
                 }
 
                 _streamingFragment = null;
-                await foreach (var response in chatClient.GetStreamingResponseAsync(chatMessages, options: ChatOptions, cancellationToken: currentChatCancellation))
+                await foreach (var response in _chatClient.GetStreamingResponseAsync(chatMessages, options: ChatOptions, cancellationToken: currentChatCancellation))
                 {
                     if (string.IsNullOrEmpty(response?.Text)) continue;
                     if (_streamingFragment is not null && string.Equals(response.ResponseId, _streamingFragment.ResponseId))
@@ -207,7 +206,7 @@ public abstract class ChatAgent : DurableGrain
             }
             catch (Exception exception)
             {
-                logger.LogError(exception, "Error submitting chat messages.");
+                _logger.LogError(exception, "Error submitting chat messages.");
                 if (exception is ClientResultException clientResultException)
                 {
                     if (clientResultException.Status == 400)
@@ -226,7 +225,7 @@ public abstract class ChatAgent : DurableGrain
                 ResponseId = _streamingFragment.ResponseId,
                 IsFinal = true
             };
-            conversationHistory.Add(response);
+            _conversationHistory.Add(response);
             if (response.ToChatMessage() is { } msg)
             {
                 chatMessages.Add(msg);
@@ -238,14 +237,14 @@ public abstract class ChatAgent : DurableGrain
             try
             {
                 // Quarantine the message in a dead letter queue.
-                var failingItem = conversationHistory.Last();
-                conversationHistory[^1] = new QuarantinedMessage($"The message could not be processed: {clientResultException.Message}", failingItem);
+                var failingItem = _conversationHistory.Last();
+                _conversationHistory[^1] = new QuarantinedMessage($"The message could not be processed: {clientResultException.Message}", failingItem);
                 chatMessages.RemoveAt(chatMessages.Count - 1);
                 await WriteStateAsync(shutdownToken);
             }
             catch (Exception exception)
             {
-                logger.LogError(exception, "Error quarantining chat message.");
+                _logger.LogError(exception, "Error quarantining chat message.");
             }
         }
     }
@@ -254,7 +253,7 @@ public abstract class ChatAgent : DurableGrain
     {
         List<ChatItem> newMessages;
         bool createdConversation = false;
-        if (conversationHistory.Count == 0)
+        if (_conversationHistory.Count == 0)
         {
             // Create the conversation.
             newMessages = await OnChatCreatedAsync(shutdownToken);
@@ -263,7 +262,7 @@ public abstract class ChatAgent : DurableGrain
                 createdConversation = true;
                 foreach (var msg in newMessages)
                 {
-                    conversationHistory.Add(msg);
+                    _conversationHistory.Add(msg);
                     if (msg.ToChatMessage() is { } chatMsg)
                     {
                         chatMessages.Add(chatMsg);
@@ -279,7 +278,7 @@ public abstract class ChatAgent : DurableGrain
             {
                 foreach (var msg in newMessages)
                 {
-                    pendingMessages.Enqueue(msg);
+                    _pendingMessages.Enqueue(msg);
                 }
 
             }
@@ -314,12 +313,12 @@ public abstract class ChatAgent : DurableGrain
 
     public async ValueTask<bool> DeleteAsync(CancellationToken cancellationToken = default)
     {
-        await this.StateMachineManager.DeleteStateAsync(cancellationToken);
-        this.DeactivateOnIdle();
+        await StateMachineManager.DeleteStateAsync(cancellationToken);
+        DeactivateOnIdle();
         return true;
     }
 
-    public ValueTask<List<ChatItem>> GetMessagesAsync(CancellationToken cancellationToken = default) => new([.. conversationHistory.Where(msg => msg.IsUserVisible)]);
+    public ValueTask<List<ChatItem>> GetMessagesAsync(CancellationToken cancellationToken = default) => new([.. _conversationHistory.Where(msg => msg.IsUserVisible)]);
 
     public IAsyncEnumerable<ChatItem> WatchChatHistoryAsync(int startIndex = 0, CancellationToken cancellationToken = default)
         => WatchChatHistoryAsync(startIndex, includePartialResponses: true, cancellationToken);
@@ -334,7 +333,7 @@ public abstract class ChatAgent : DurableGrain
 
             // Account for partial responses.
             if (includePartialResponses &&
-                i == conversationHistory.Count && _streamingFragment is { } fragment &&
+                i == _conversationHistory.Count && _streamingFragment is { } fragment &&
                 (lastFragment is null || fragment.Text.Length > lastFragment.Length))
             {
                 var partialResponse = new AssistantResponse(fragment.Text[(lastFragment?.Length ?? 0)..])
@@ -347,14 +346,14 @@ public abstract class ChatAgent : DurableGrain
                 yield return partialResponse;
             }
 
-            if (i >= conversationHistory.Count)
+            if (i >= _conversationHistory.Count)
             {
                 await _historyUpdatedEvent.WaitAsync(cancellationToken);
                 continue;
             }
 
             lastFragment = null;
-            var message = conversationHistory[i];
+            var message = _conversationHistory[i];
             ++i;
 
             if (!message.IsUserVisible)

@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.AI;
 using Orleans.Concurrency;
-using Orleans.Journaling;
 using System.ComponentModel;
 using System.Distributed.AI.Agents;
 using System.Distributed.DurableTasks;
@@ -11,12 +10,10 @@ namespace Accede.Service.Agents;
 [Reentrant]
 internal sealed partial class UserLiaisonAgent(
     ILogger<UserLiaisonAgent> logger,
-    [FromKeyedServices("large")] IChatClient chatClient,
-    [FromKeyedServices("pending")] IDurableQueue<ChatItem> pendingMessages,
-    [FromKeyedServices("conversation-history")] IDurableList<ChatItem> conversationHistory)
-    : ChatAgent(logger, chatClient, pendingMessages, conversationHistory), IUserLiaisonAgent
+    [FromKeyedServices("large")] IChatClient chatClient)
+    : ChatAgent(logger, chatClient), IUserLiaisonAgent
 {
-    public async ValueTask AddUserMessageAsync(ChatItem message, CancellationToken cancellationToken = default) => await AddMessageAsync(message, cancellationToken);
+    public async ValueTask PostMessageAsync(ChatItem message, CancellationToken cancellationToken = default) => await AddMessageAsync(message, cancellationToken);
 
     protected override async Task<List<ChatItem>> OnChatCreatedAsync(CancellationToken cancellationToken)
     {
@@ -56,10 +53,9 @@ internal sealed partial class UserLiaisonAgent(
 
 internal interface IUserLiaisonAgent : IGrainWithStringKey
 {
-    ValueTask AddUserMessageAsync(ChatItem message, CancellationToken cancellationToken = default);
+    ValueTask PostMessageAsync(ChatItem message, CancellationToken cancellationToken = default);
     ValueTask CancelAsync(CancellationToken cancellationToken = default);
     ValueTask<bool> DeleteAsync(CancellationToken cancellationToken = default);
-    ValueTask<List<ChatItem>> GetMessagesAsync(CancellationToken cancellationToken = default);
     IAsyncEnumerable<ChatItem> WatchChatHistoryAsync(int startIndex, CancellationToken cancellationToken = default);
 }
 
