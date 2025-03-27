@@ -9,6 +9,7 @@ using Accede.Service.Api;
 using Accede.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseDefaultServiceProvider(o => o.ValidateOnBuild = false);
 
 builder.AddKeyedAzureBlobClient("state");
 builder.AddKeyedAzureTableClient("clustering");
