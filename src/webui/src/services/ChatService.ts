@@ -1,3 +1,4 @@
+import { startTransition } from 'react';
 import { Message, MessageFragment } from '../types/ChatTypes';
 import { UnboundedChannel } from '../utils/UnboundedChannel';
 
@@ -32,12 +33,13 @@ class ChatService {
 
         abortController.signal.addEventListener('abort', abortHandler);
 
+        let index = startIndex || 0;
         try {
             while (!abortController.signal.aborted) {
                 let channel = new UnboundedChannel<MessageFragment>();
                 
                 try {
-                    const eventSource = new EventSource(`${this.backendUrl}/chat/stream?startIndex=${startIndex}`);
+                    const eventSource = new EventSource(`${this.backendUrl}/chat/stream?startIndex=${index}`);
                     
                     // Store the event source and channel
                     this.activeStream = { eventSource, channel };
@@ -46,20 +48,19 @@ class ChatService {
                     eventSource.addEventListener('message', (event) => {
                         try {
                             const chatItem = JSON.parse(event.data);
-                            
+
                             // Create a MessageFragment from the ChatItem
                             const fragment: MessageFragment = {
                                 role: chatItem.role,
                                 type: chatItem.type,
                                 text: chatItem.text,
-                                responseId: chatItem.responseId,
-                                isFinal: chatItem.isFinal ?? false,
-                                attachments: chatItem.attachments
+                                responseId: chatItem.responseId || "msg-" + index, 
+                                isFinal: chatItem.isFinal ?? true,
+                                attachments: chatItem.attachments || null
                             };
 
                             if (fragment.isFinal) {
-                                // Increment the start index for the next connection
-                                startIndex++;
+                                index++;
                             }
                             
                             channel.write(fragment);

@@ -152,7 +152,7 @@ const App: React.FC = () => {
                         ? {
                             ...msg,
                             text: getMessageText(msg.text, newText),
-                            isLoading: !isFinal,
+                            isFinal: isFinal,
                             role: role || msg.role,
                             type: type || msg.type,
                             attachments: attachments || msg.attachments
@@ -166,7 +166,7 @@ const App: React.FC = () => {
                     role, 
                     text: newText, 
                     type: type, 
-                    isLoading: !isFinal, 
+                    isFinal: isFinal, 
                     attachments: attachments 
                 }];
             }
