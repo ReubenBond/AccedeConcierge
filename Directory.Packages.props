@@ -28,12 +28,12 @@
     <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="9.3.0-preview.1.25161.3" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.2.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="9.1.0" />
-    <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="9.2.0-dev-202503262119" />
-    <PackageVersion Include="Microsoft.Orleans.Reminders" Version="9.2.0-dev-202503262119" />
-    <PackageVersion Include="Microsoft.Orleans.Reminders.AzureStorage" Version="9.2.0-dev-202503262119" />
-    <PackageVersion Include="Microsoft.Orleans.Serialization.SystemTextJson" Version="9.2.0-dev-202503262119" />
-    <PackageVersion Include="Microsoft.Orleans.Server" Version="9.2.0-dev-202503262119" />
-    <PackageVersion Include="Microsoft.Orleans.Journaling" Version="9.2.0-dev-202503262119" />
+    <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="9.2.0-dev-202503271229" />
+    <PackageVersion Include="Microsoft.Orleans.Reminders" Version="9.2.0-dev-202503271229" />
+    <PackageVersion Include="Microsoft.Orleans.Reminders.AzureStorage" Version="9.2.0-dev-202503271229" />
+    <PackageVersion Include="Microsoft.Orleans.Serialization.SystemTextJson" Version="9.2.0-dev-202503271229" />
+    <PackageVersion Include="Microsoft.Orleans.Server" Version="9.2.0-dev-202503271229" />
+    <PackageVersion Include="Microsoft.Orleans.Journaling" Version="9.2.0-dev-202503271229" />
     <PackageVersion Include="Octokit" Version="14.0.0" />
     <PackageVersion Include="OllamaSharp" Version="5.1.4" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.11.2" />

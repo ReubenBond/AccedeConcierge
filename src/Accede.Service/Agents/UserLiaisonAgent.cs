@@ -1,7 +1,9 @@
 ﻿using Microsoft.Extensions.AI;
 using Orleans.Concurrency;
 using Orleans.Journaling;
+using System.ComponentModel;
 using System.Distributed.AI.Agents;
+using System.Distributed.DurableTasks;
 #pragma warning disable 1998
 
 namespace Accede.Service.Agents;
@@ -10,21 +12,10 @@ namespace Accede.Service.Agents;
 internal sealed partial class UserLiaisonAgent(
     ILogger<UserLiaisonAgent> logger,
     [FromKeyedServices("large")] IChatClient chatClient,
-    //[FromKeyedServices("state")] IDurableValue<LiaisonState> state,
     [FromKeyedServices("pending")] IDurableQueue<ChatItem> pendingMessages,
     [FromKeyedServices("conversation-history")] IDurableList<ChatItem> conversationHistory)
     : ChatAgent(logger, chatClient, pendingMessages, conversationHistory), IUserLiaisonAgent
 {
-    private ChatOptions? _chatOptions;
-
-    protected override ChatOptions ChatOptions => _chatOptions ??= new ChatOptions
-    {
-        Tools =
-        [
-            //DurableAIFunctionFactory.Create(UpdateDraftResponse, FunctionFactoryOptions),
-        ],
-    };
-
     public async ValueTask AddUserMessageAsync(ChatItem message, CancellationToken cancellationToken = default) => await AddMessageAsync(message, cancellationToken);
 
     protected override async Task<List<ChatItem>> OnChatCreatedAsync(CancellationToken cancellationToken)
@@ -34,11 +25,11 @@ internal sealed partial class UserLiaisonAgent(
             [
                 new SystemPrompt(
                     $"""
-                    You are a travel agent, liaising with a user, '{this.GetPrimaryKeyString()}'.
+                    You are a travel agent, liaising with a user, '{userName}'.
                     You are helping them to:
                     - book travel
                     - submit expense reports
-                    - provide 
+                    Start by using the 'SayHello' tool to greet the user.
                     """)
             ];
     }
@@ -49,6 +40,12 @@ internal sealed partial class UserLiaisonAgent(
         // If not, provide more instruction to the language model to guide it towards that goal.
         return Task.FromResult<List<ChatItem>>([]);
     }
+
+    [Tool, Description("Creates a greeting message for the user")]
+    public async DurableTask<string> SayHello([Description("The user's name.")] string userName)
+    {
+        return $"Hello, {userName}! How can I help you today?";
+    }
 }
 
 internal interface IUserLiaisonAgent : IGrainWithStringKey
@@ -57,7 +54,6 @@ internal interface IUserLiaisonAgent : IGrainWithStringKey
     ValueTask CancelAsync(CancellationToken cancellationToken = default);
     ValueTask<bool> DeleteAsync(CancellationToken cancellationToken = default);
     ValueTask<List<ChatItem>> GetMessagesAsync(CancellationToken cancellationToken = default);
-    IAsyncEnumerable<ChatItem> GetChatItemsAsync(CancellationToken cancellationToken = default);
     IAsyncEnumerable<ChatItem> SubscribeAsync(int startIndex, CancellationToken cancellationToken = default);
 }
 

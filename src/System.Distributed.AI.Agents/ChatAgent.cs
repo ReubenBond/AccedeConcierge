@@ -3,6 +3,7 @@ using Accede.Service.Utilities.Functions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Orleans.Concurrency;
+using Orleans.DurableTasks;
 using Orleans.Journaling;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -12,27 +13,46 @@ using System.Runtime.CompilerServices;
 namespace Accede.Service.Agents;
 
 [Reentrant]
-public abstract class ChatAgent(
-    ILogger logger,
-    IChatClient chatClient,
-    IDurableQueue<ChatItem> pendingMessages,
-    IDurableList<ChatItem> conversationHistory) : DurableGrain
+public abstract class ChatAgent : DurableGrain
 {
     private readonly CancellationTokenSource _shutdownCts = new();
     private readonly AsyncManualResetEvent _pendingMessageEvent = new();
     private readonly AsyncManualResetEvent _historyUpdatedEvent = new();
+    private readonly ILogger logger;
+    private readonly IChatClient chatClient;
+    private readonly IDurableQueue<ChatItem> pendingMessages;
+    private readonly IDurableList<ChatItem> conversationHistory;
+    private readonly AgentToolRegistry _toolRegistry;
     private AssistantResponse? _streamingFragment;
-    private DurableAIFunctionFactoryOptions? _functionFactoryOptions;
+    private AgentToolOptions? _functionFactoryOptions;
     private CancellationTokenSource? _currentChatCts;
     private Task? _pumpTask;
 
-    protected DurableAIFunctionFactoryOptions FunctionFactoryOptions => _functionFactoryOptions ??= new DurableAIFunctionFactoryOptions
+    public ChatAgent(
+        ILogger logger,
+        IChatClient chatClient,
+        IDurableQueue<ChatItem> pendingMessages,
+        IDurableList<ChatItem> conversationHistory)
     {
-        TaskScheduler = TaskScheduler.Current
-    };
+        this.logger = logger;
+        this.chatClient = chatClient;
+        this.pendingMessages = pendingMessages;
+        this.conversationHistory = conversationHistory;
+
+        // Register tools
+        _toolRegistry = AgentToolRegistry.Create(GetType(), GrainContext, FunctionFactoryOptions);
+        GrainContext.SetComponent(_toolRegistry);
+        ChatOptions = new ChatOptions { Tools = _toolRegistry.Tools };
+    }
+
+    protected IList<AITool> Tools => _toolRegistry.Tools;
+    protected AgentToolOptions FunctionFactoryOptions => _functionFactoryOptions ??= new AgentToolOptions { };
+    protected void AddTool(Delegate toolFunc) => _toolRegistry.AddTool(toolFunc, toolName: null);
+    protected void AddTool(Delegate toolFunc, string? toolName) => _toolRegistry.AddTool(toolFunc, toolName);
+
     protected abstract Task<List<ChatItem>> OnChatCreatedAsync(CancellationToken cancellationToken);
     protected abstract Task<List<ChatItem>> OnChatIdleAsync(CancellationToken cancellationToken);
-    protected virtual ChatOptions? ChatOptions { get; } = null;
+    protected virtual ChatOptions ChatOptions { get; }
     protected IReadOnlyList<ChatItem> ConversationHistory => new ReadOnlyCollection<ChatItem>(conversationHistory);
 
     public override Task OnActivateAsync(CancellationToken cancellationToken)
