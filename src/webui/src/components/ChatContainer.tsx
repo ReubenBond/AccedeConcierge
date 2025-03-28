@@ -156,7 +156,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
                 {messages.map(msg => (
                     <div 
                         key={msg.responseId} 
-                        className={`message ${msg.role}`}
+                        className={`message ${msg.role} ${msg.type === 'preference-updated' ? 'preference-message' : ''}`}
                         data-type={msg.type}
                     >
                         <div className="message-container">
@@ -170,23 +170,25 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
                                     {msg.text}
                                 </ReactMarkdown>
                                 {renderAttachments(msg.attachments)}
-                                <button 
-                                    className={`copy-message-button ${copiedMsgId === msg.responseId ? 'copied' : ''}`}
-                                    onClick={() => copyToClipboard(msg.text, msg.responseId)}
-                                    aria-label="Copy message"
-                                    title="Copy to clipboard"
-                                >
-                                    {copiedMsgId === msg.responseId ? (
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <polyline points="20 6 9 17 4 12"></polyline>
-                                        </svg>
-                                    ) : (
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                        </svg>
-                                    )}
-                                </button>
+                                {msg.type !== 'preference-updated' && (
+                                    <button 
+                                        className={`copy-message-button ${copiedMsgId === msg.responseId ? 'copied' : ''}`}
+                                        onClick={() => copyToClipboard(msg.text, msg.responseId)}
+                                        aria-label="Copy message"
+                                        title="Copy to clipboard"
+                                    >
+                                        {copiedMsgId === msg.responseId ? (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg>
+                                        ) : (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                            </svg>
+                                        )}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>

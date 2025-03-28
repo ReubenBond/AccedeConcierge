@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Distributed.AI.Agents.Tools;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;

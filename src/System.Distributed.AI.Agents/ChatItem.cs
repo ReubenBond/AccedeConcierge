@@ -9,6 +9,9 @@ public abstract class ChatItem(string text)
     [Id(0)]
     public string Text { get; init; } = text;
 
+    [Id(1)]
+    public required string Id { get; init; }
+
     public abstract ChatRole Role { get; }
 
     public abstract string Type { get; }

@@ -7,7 +7,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Accede.Service.Utilities.Functions;
+namespace System.Distributed.AI.Agents.Tools;
 
 /// <summary>
 /// Represents options that can be provided when creating an <see cref="AIFunction"/> from a method.

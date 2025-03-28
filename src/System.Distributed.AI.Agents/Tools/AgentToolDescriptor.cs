@@ -12,9 +12,10 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization.Metadata;
+using Accede.Service.Utilities.Functions;
 using Microsoft.Extensions.AI;
 
-namespace Accede.Service.Utilities.Functions;
+namespace System.Distributed.AI.Agents.Tools;
 
 /// <summary>
 /// A descriptor for a .NET method-backed AIFunction that precomputes its marshalling delegates and JSON schema.
@@ -199,9 +200,9 @@ internal sealed class AgentToolDescriptor
                 {
                     null => null, // Return as-is if null -- if the parameter is a struct this will be handled by MethodInfo.Invoke
                     _ when parameterType.IsInstanceOfType(value) => value, // Do nothing if value is assignable to parameter type
-                    JsonElement element => JsonSerializer.Deserialize(element, typeInfo),
-                    JsonDocument doc => JsonSerializer.Deserialize(doc, typeInfo),
-                    JsonNode node => JsonSerializer.Deserialize(node, typeInfo),
+                    JsonElement element => element.Deserialize(typeInfo),
+                    JsonDocument doc => doc.Deserialize(typeInfo),
+                    JsonNode node => node.Deserialize(typeInfo),
                     _ => MarshallViaJsonRoundtrip(value),
                 };
 
@@ -271,6 +272,7 @@ internal sealed class AgentToolDescriptor
         // DurableTask
         if (returnType == typeof(DurableTask))
         {
+            // DurableTasks are handled at a higher level and don't need to be marshalled.
             return static (result, cancellationToken) =>
             {
                 return Task.FromResult<object?>(null);
@@ -310,6 +312,7 @@ internal sealed class AgentToolDescriptor
             // DurableTask<T>
             if (returnType.GetGenericTypeDefinition() == typeof(DurableTask<>))
             {
+                // DurableTask<T> methods are resolved to 'T' beforehand.
                 returnTypeInfo = serializerOptions.GetTypeInfo(returnType.GetGenericArguments()[0]);
                 return async (result, cancellationToken) =>
                 {

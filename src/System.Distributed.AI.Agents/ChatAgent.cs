@@ -1,5 +1,4 @@
 ﻿using Accede.Service.Utilities;
-using Accede.Service.Utilities.Functions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -9,12 +8,15 @@ using System.ClientModel;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Distributed.AI.Agents;
+using System.Distributed.AI.Agents.Tools;
+using System.Distributed.DurableTasks;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 
 namespace Accede.Service.Agents;
 
 [Reentrant]
-public abstract class ChatAgent : DurableGrain
+public abstract class ChatAgent : DurableGrain, IChatAgent
 {
     private readonly CancellationTokenSource _shutdownCts = new();
     private readonly AsyncManualResetEvent _pendingMessageEvent = new();
@@ -168,6 +170,7 @@ public abstract class ChatAgent : DurableGrain
                         // Update to the current message fragment.
                         _streamingFragment = new AssistantResponse(_streamingFragment.Text + response.Text)
                         {
+                            Id = _streamingFragment.Id,
                             ResponseId = response.ResponseId,
                             IsFinal = false
                         };
@@ -183,6 +186,7 @@ public abstract class ChatAgent : DurableGrain
                         // Start a new message.
                         _streamingFragment = new AssistantResponse(response.Text)
                         {
+                            Id = response.ResponseId ?? Guid.NewGuid().ToString("N"),
                             ResponseId = response.ResponseId,
                             IsFinal = false
                         };
@@ -222,6 +226,7 @@ public abstract class ChatAgent : DurableGrain
             Debug.Assert(_streamingFragment is not null);
             var response = new AssistantResponse(_streamingFragment.Text)
             {
+                Id = _streamingFragment.Id,
                 ResponseId = _streamingFragment.ResponseId,
                 IsFinal = true
             };
@@ -238,7 +243,10 @@ public abstract class ChatAgent : DurableGrain
             {
                 // Quarantine the message in a dead letter queue.
                 var failingItem = _conversationHistory.Last();
-                _conversationHistory[^1] = new QuarantinedMessage($"The message could not be processed: {clientResultException.Message}", failingItem);
+                _conversationHistory[^1] = new QuarantinedMessage($"The message could not be processed: {clientResultException.Message}", failingItem)
+                {
+                    Id = Guid.NewGuid().ToString("N")
+                };
                 chatMessages.RemoveAt(chatMessages.Count - 1);
                 await WriteStateAsync(shutdownToken);
             }
@@ -323,9 +331,12 @@ public abstract class ChatAgent : DurableGrain
     public IAsyncEnumerable<ChatItem> WatchChatHistoryAsync(int startIndex = 0, CancellationToken cancellationToken = default)
         => WatchChatHistoryAsync(startIndex, includePartialResponses: true, cancellationToken);
 
-    private async IAsyncEnumerable<ChatItem> WatchChatHistoryAsync(int startIndex = 0, bool includePartialResponses = true, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    private async IAsyncEnumerable<ChatItem> WatchChatHistoryAsync(
+        int startIndex = 0,
+        bool includePartialResponses = true,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var i = startIndex;
+        var index = startIndex;
         string? lastFragment = null;
         while (true)
         {
@@ -333,11 +344,12 @@ public abstract class ChatAgent : DurableGrain
 
             // Account for partial responses.
             if (includePartialResponses &&
-                i == _conversationHistory.Count && _streamingFragment is { } fragment &&
+                index == _conversationHistory.Count && _streamingFragment is { } fragment &&
                 (lastFragment is null || fragment.Text.Length > lastFragment.Length))
             {
                 var partialResponse = new AssistantResponse(fragment.Text[(lastFragment?.Length ?? 0)..])
                 {
+                    Id = fragment.Id,
                     ResponseId = fragment.ResponseId,
                     IsFinal = false
                 };
@@ -346,15 +358,15 @@ public abstract class ChatAgent : DurableGrain
                 yield return partialResponse;
             }
 
-            if (i >= _conversationHistory.Count)
+            if (index >= _conversationHistory.Count)
             {
                 await _historyUpdatedEvent.WaitAsync(cancellationToken);
                 continue;
             }
 
             lastFragment = null;
-            var message = _conversationHistory[i];
-            ++i;
+            var message = _conversationHistory[index];
+            ++index;
 
             if (!message.IsUserVisible)
             {
@@ -363,6 +375,50 @@ public abstract class ChatAgent : DurableGrain
             }
 
             yield return message;
+        }
+    }
+
+    public async DurableTask<ChatItem> SendRequestAsync(ChatItem request, CancellationToken cancellationToken)
+    {
+        if (request.Role != ChatRole.User)
+        {
+            throw new ArgumentException("Only user messages can be sent to the chat agent.", nameof(request));
+        }
+
+        // Only add the message if it hasn't been added before.
+        if (!_pendingMessages.Any(item => item.Id == request.Id) && !_conversationHistory.Any(item => item.Id == request.Id))
+        {
+            AddStatusMessage(request);
+            await WriteStateAsync(cancellationToken);
+        }
+
+        // Wait for a response.
+        var foundOurMessage = false;
+        var index = 0;
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (index >= _conversationHistory.Count)
+            {
+                await _historyUpdatedEvent.WaitAsync(cancellationToken);
+                continue;
+            }
+
+            var message = _conversationHistory[index];
+            ++index;
+
+            // Responses come from the assistant - they do not include status responses, for example.
+            if (foundOurMessage && message.Role == ChatRole.Assistant)
+            {
+                return message;
+            }
+
+            if (message.Id == request.Id)
+            {
+                // The next message assistant response should correspond to our message.
+                foundOurMessage = true;
+            }
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Accede.Service.Utilities.Functions;
 using Microsoft.Extensions.AI;
 using System.Distributed.AI.Agents;
+using System.Distributed.AI.Agents.Tools;
 using System.Reflection;
 
 namespace Accede.Service.Agents;

@@ -2,18 +2,19 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.ObjectModel;
+using Accede.Service.Utilities;
 using Microsoft.Extensions.AI;
 
-namespace Accede.Service.Utilities;
+namespace System.Distributed.AI.Agents.Tools;
 
 /// <summary>Provides context for an in-flight function invocation.</summary>
-public sealed class DurableFunctionInvocationContext
+public sealed class ToolCallContext
 {
     /// <summary>
     /// A nop function used to allow <see cref="Function"/> to be non-nullable. Default instances of
-    /// <see cref="DurableFunctionInvocationContext"/> start with this as the target function.
+    /// <see cref="ToolCallContext"/> start with this as the target function.
     /// </summary>
-    private static readonly AIFunction _nopFunction = AIFunctionFactory.Create(() => { }, nameof(DurableFunctionInvocationContext));
+    private static readonly AIFunction _nopFunction = AIFunctionFactory.Create(() => { }, nameof(ToolCallContext));
 
     /// <summary>The chat contents associated with the operation that initiated this function call request.</summary>
     private IList<ChatMessage> _messages = Array.Empty<ChatMessage>();
@@ -24,8 +25,8 @@ public sealed class DurableFunctionInvocationContext
     /// <summary>The function call content information associated with this invocation.</summary>
     private FunctionCallContent _callContent = new(string.Empty, _nopFunction.Name, ReadOnlyDictionary<string, object?>.Empty);
 
-    /// <summary>Initializes a new instance of the <see cref="DurableFunctionInvocationContext"/> class.</summary>
-    public DurableFunctionInvocationContext()
+    /// <summary>Initializes a new instance of the <see cref="ToolCallContext"/> class.</summary>
+    public ToolCallContext()
     {
     }
 

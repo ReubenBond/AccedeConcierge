@@ -1,18 +1,26 @@
 ﻿using Microsoft.Extensions.AI;
+using System.Diagnostics.CodeAnalysis;
 using System.Distributed.AI.Agents;
 
 namespace Accede.Service.Agents;
 
 [GenerateSerializer]
-public class SystemPrompt(string text) : ChatItem(text)
+public sealed class SystemPrompt : ChatItem
 {
+    [SetsRequiredMembers]
+    public SystemPrompt(string text) : base(text)
+    {
+        // There is only one system prompt.
+        Id = "system-prompt";
+    }
+
     public override string Type => "system-prompt";
     public override ChatRole Role => ChatRole.System;
     public override bool IsUserVisible => false;
 }
 
 [GenerateSerializer]
-public class UserMessage(string text) : ChatItem(text)
+public sealed class UserMessage(string text) : ChatItem(text)
 {
     public override string Type => "user";
     public override ChatRole Role => ChatRole.User;
@@ -29,9 +37,7 @@ public class UserMessage(string text) : ChatItem(text)
 
     private ChatMessage CreateChatMessageWithAttachments(List<UriAttachment> attachments)
     {
-        var content = new List<AIContent>(attachments.Count + 1)
-        {new TextContent(Text)
-        };
+        var content = new List<AIContent>(attachments.Count + 1) { new TextContent(Text) };
         foreach (var attachment in attachments)
         {
             if (attachment.Uri.StartsWith("data:"))
@@ -46,6 +52,15 @@ public class UserMessage(string text) : ChatItem(text)
 
         return new ChatMessage(ChatRole.User, content);
     }
+}
+
+[GenerateSerializer]
+public sealed class UserPreferenceUpdated(string text) : ChatItem(text)
+{
+    public override string Type => "preference-updated";
+    public override ChatRole Role => ChatRole.Tool;
+    public override bool IsUserVisible => true;
+    public override ChatMessage? ToChatMessage() => null;
 }
 
 [GenerateSerializer]

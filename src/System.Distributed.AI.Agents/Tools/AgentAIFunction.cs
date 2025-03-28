@@ -7,10 +7,12 @@ using System.Distributed.AI.Agents;
 using System.Distributed.DurableTasks;
 using System.Reflection;
 using System.Text.Json;
+using Accede.Service.Utilities;
+using Accede.Service.Utilities.Functions;
 using Microsoft.Extensions.AI;
 using Orleans.DurableTasks;
 
-namespace Accede.Service.Utilities.Functions;
+namespace System.Distributed.AI.Agents.Tools;
 
 internal sealed class AgentAIFunction : AIFunction
 {

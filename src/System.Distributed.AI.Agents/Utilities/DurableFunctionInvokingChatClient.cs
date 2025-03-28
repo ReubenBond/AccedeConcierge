@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Distributed.AI.Agents.Tools;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -39,8 +40,8 @@ namespace Accede.Service.Utilities;
 /// </remarks>
 public partial class DurableFunctionInvokingChatClient : DelegatingChatClient
 {
-    /// <summary>The <see cref="DurableFunctionInvocationContext"/> for the current function invocation.</summary>
-    private static readonly AsyncLocal<DurableFunctionInvocationContext?> _currentContext = new();
+    /// <summary>The <see cref="ToolCallContext"/> for the current function invocation.</summary>
+    private static readonly AsyncLocal<ToolCallContext?> _currentContext = new();
 
     /// <summary>The logger to use for logging information about function invocation.</summary>
     private readonly ILogger _logger;
@@ -65,12 +66,12 @@ public partial class DurableFunctionInvokingChatClient : DelegatingChatClient
     }
 
     /// <summary>
-    /// Gets or sets the <see cref="DurableFunctionInvocationContext"/> for the current function invocation.
+    /// Gets or sets the <see cref="ToolCallContext"/> for the current function invocation.
     /// </summary>
     /// <remarks>
     /// This value flows across async calls.
     /// </remarks>
-    public static DurableFunctionInvocationContext? CurrentContext
+    public static ToolCallContext? CurrentContext
     {
         get => _currentContext.Value;
         protected set => _currentContext.Value = value;
@@ -585,7 +586,7 @@ public partial class DurableFunctionInvokingChatClient : DelegatingChatClient
             return new(ContinueMode.Continue, FunctionInvocationStatus.NotFound, callContent, result: null, exception: null);
         }
 
-        DurableFunctionInvocationContext context = new()
+        ToolCallContext context = new()
         {
             Messages = messages,
             Options = options,
@@ -684,7 +685,7 @@ public partial class DurableFunctionInvokingChatClient : DelegatingChatClient
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> to monitor for cancellation requests. The default is <see cref="CancellationToken.None"/>.</param>
     /// <returns>The result of the function invocation, or <see langword="null"/> if the function invocation returned <see langword="null"/>.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="context"/> is <see langword="null"/>.</exception>
-    protected virtual async Task<object?> InvokeFunctionAsync(DurableFunctionInvocationContext context, CancellationToken cancellationToken)
+    protected virtual async Task<object?> InvokeFunctionAsync(ToolCallContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
 

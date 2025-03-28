@@ -284,6 +284,33 @@ html, body {
     box-shadow: none;
 }
 
+/* Preference updated message styling */
+.message[data-type="preference-updated"] {
+    margin-bottom: 0.25rem;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.message[data-type="preference-updated"] .message-container {
+    max-width: 100%;
+}
+
+.message[data-type="preference-updated"] .message-content {
+    background: none;
+    border: none;
+    color: #64748b;
+    font-style: italic;
+    font-size: 0.85rem;
+    padding: 2px 8px;
+    text-align: center;
+    box-shadow: none;
+}
+
+.message.preference-message .message-container {
+    margin-bottom: 0.25rem;
+}
+
 .message-form {
     display: flex;
     margin: 1rem;
