@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.AI;
+﻿using Accede.Service.Models;
+using Microsoft.Extensions.AI;
 using Orleans.Concurrency;
 using Orleans.Journaling;
 using System.ComponentModel;
@@ -12,6 +13,7 @@ namespace Accede.Service.Agents;
 internal sealed partial class UserLiaisonAgent(
     ILogger<UserLiaisonAgent> logger,
     [FromKeyedServices("large")] IChatClient chatClient,
+    [FromKeyedServices("trip-request")] IDurableValue<TripParameters> tripRequest,
     [FromKeyedServices("user-preferences")] IDurableDictionary<string, string> userPreferences)
     : ChatAgent(logger, chatClient), IUserLiaisonAgent
 {
@@ -43,6 +45,8 @@ internal sealed partial class UserLiaisonAgent(
 
     protected override Task<List<ChatItem>> OnChatIdleAsync(CancellationToken cancellationToken)
     {
+        if (tripRequest.Value // is not fully fleshed out) {
+            }
         // Check whether the goal conditions are met.
         // If not, provide more instruction to the language model to guide it towards that goal.
         return Task.FromResult<List<ChatItem>>([]);

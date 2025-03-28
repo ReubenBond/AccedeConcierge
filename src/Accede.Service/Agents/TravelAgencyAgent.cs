@@ -19,7 +19,7 @@ internal sealed class TravelAgencyAgent(
                 new SystemPrompt(
                 """
 
-                """
+                """)
             ];
         return Task.FromResult(systemPrompt);
     }
