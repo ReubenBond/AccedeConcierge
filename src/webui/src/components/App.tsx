@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ChatService from '../services/ChatService';
-import { Message, AssistantMessage, FileAttachment } from '../types/ChatTypes';
+import { Message, UserMessage, AssistantMessage, FileAttachment } from '../types/ChatTypes';
 import ChatContainer from './ChatContainer';
 import VirtualizedChatList from './VirtualizedChatList';
 import logo from '../logo.svg';
@@ -180,12 +180,6 @@ const App: React.FC = () => {
         });
     };
 
-    const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-        const container = e.target as HTMLDivElement;
-        const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
-        setShouldAutoScroll(isNearBottom);
-    }, []);
-
     useEffect(() => {
         // Instead of direct scroll listener, we'll rely on the checkScroll function in ChatContainer
         if (shouldAutoScroll && messagesEndRef.current) {
@@ -202,11 +196,15 @@ const App: React.FC = () => {
         if ((!prompt.trim() && selectedFiles.length === 0) || streamingMessageId) return;
 
         // Create a message object that includes file attachments if any
-        const userMessage: Message = {
+        const userMessage: UserMessage = {
             responseId: `user-${Date.now()}`, 
             role: 'user', 
             text: prompt, 
-            type: 'user'
+            type: 'user',
+            attachments: selectedFiles.length > 0 ? selectedFiles.map(file => ({
+                uri: URL.createObjectURL(file),
+                contentType: file.type
+            })) : undefined
         };
 
         setMessages(prevMessages => [...prevMessages, userMessage]);

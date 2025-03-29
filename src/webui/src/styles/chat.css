@@ -264,7 +264,10 @@
     max-width: 100%;
     border-radius: 6px;
     overflow: hidden;
-    background-color: #f0f4f8;
+    background-color: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .attached-image {
