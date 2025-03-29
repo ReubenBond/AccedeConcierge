@@ -15,20 +15,19 @@ const renderAttachments = (attachments?: FileAttachment[]) => {
     return (
         <div className="message-attachments">
             {attachments.map((attachment, index) => (
-                attachment.type.startsWith('image/') ? (
+                attachment.contentType.startsWith('image/') ? (
                     <div key={index} className="message-image-attachment">
-                        <a href={attachment.url} target="_blank" rel="noopener noreferrer">
+                        <a href={attachment.uri} target="_blank" rel="noopener noreferrer">
                             <img 
-                                src={attachment.url} 
-                                alt={attachment.name} 
+                                src={attachment.uri} 
                                 className="attached-image"
                             />
                         </a>
                     </div>
                 ) : (
                     <div key={index} className="message-file-attachment">
-                        <a href={attachment.url} target="_blank" rel="noopener noreferrer">
-                            {attachment.name}
+                        <a href={attachment.uri} target="_blank" rel="noopener noreferrer">
+                            {attachment.uri}
                         </a>
                     </div>
                 )
@@ -115,7 +114,7 @@ function VirtualizedChatList({ messages }: VirtualizedChatListProps) {
         // Additional height for image attachments
         const attachmentHeight = msg.attachments?.length 
             ? msg.attachments.reduce((height, attachment) => {
-                return height + (attachment.type.startsWith('image/') ? 200 : 40);
+                return height + (attachment.contentType.startsWith('image/') ? 200 : 40);
               }, 0)
             : 0;
         

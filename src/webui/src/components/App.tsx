@@ -4,7 +4,7 @@ import { Message, AssistantMessage, FileAttachment } from '../types/ChatTypes';
 import ChatContainer from './ChatContainer';
 import VirtualizedChatList from './VirtualizedChatList';
 import logo from '../logo.svg';
-import './App.css';
+import '../styles/index.css';
 
 const loadingIndicatorId = 'loading-indicator';
 
