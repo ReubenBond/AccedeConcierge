@@ -1,0 +1,178 @@
+[
+    {
+        "FlightNumber": "AA123",
+        "Origin": "Chicago",
+        "Destination": "New York",
+        "DepartureTime": "2025-03-14T08:00:00",
+        "ArrivalTime": "2025-03-14T12:00:00",
+        "Price": 350.0,
+        "Airline": "American Airlines",
+        "Duration": "4h",
+        "Layovers": false
+    },
+    {
+        "FlightNumber": "AA124",
+        "Origin": "New York",
+        "Destination": "Chicago",
+        "DepartureTime": "2025-03-18T08:00:00",
+        "ArrivalTime": "2025-03-18T12:00:00",
+        "Price": 350.0,
+        "Airline": "American Airlines",
+        "Duration": "4h",
+        "Layovers": false
+    },
+    {
+        "FlightNumber": "DL456",
+        "Origin": "Los Angeles",
+        "Destination": "Chicago",
+        "DepartureTime": "2025-03-14T09:30:00",
+        "ArrivalTime": "2025-03-14T13:30:00",
+        "Price": 400.0,
+        "Airline": "Delta Airlines",
+        "Duration": "4h",
+        "Layovers": false
+    },
+    {
+        "FlightNumber": "DL457",
+        "Origin": "Chicago",
+        "Destination": "Los Angeles",
+        "DepartureTime": "2025-03-17T09:30:00",
+        "ArrivalTime": "2025-03-17T13:30:00",
+        "Price": 400.0,
+        "Airline": "Delta Airlines",
+        "Duration": "4h",
+        "Layovers": false
+    },
+    {
+        "FlightNumber": "UA789",
+        "Origin": "San Francisco",
+        "Destination": "Chicago",
+        "DepartureTime": "2025-03-14T10:00:00",
+        "ArrivalTime": "2025-03-14T14:00:00",
+        "Price": 375.0,
+        "Airline": "United Airlines",
+        "Duration": "4h",
+        "Layovers": false
+    },
+    {
+        "FlightNumber": "UA790",
+        "Origin": "Chicago",
+        "Destination": "San Francisco",
+        "DepartureTime": "2025-03-16T10:00:00",
+        "ArrivalTime": "2025-03-16T14:00:00",
+        "Price": 375.0,
+        "Airline": "United Airlines",
+        "Duration": "4h",
+        "Layovers": false
+    },
+    {
+        "FlightNumber": "SW101",
+        "Origin": "Houston",
+        "Destination": "Chicago",
+        "DepartureTime": "2025-03-14T11:00:00",
+        "ArrivalTime": "2025-03-14T15:00:00",
+        "Price": 320.0,
+        "Airline": "Southwest Airlines",
+        "Duration": "4h",
+        "Layovers": false
+    },
+    {
+        "FlightNumber": "SW102",
+        "Origin": "Chicago",
+        "Destination": "Houston",
+        "DepartureTime": "2025-03-18T11:00:00",
+        "ArrivalTime": "2025-03-18T15:00:00",
+        "Price": 320.0,
+        "Airline": "Southwest Airlines",
+        "Duration": "4h",
+        "Layovers": false
+    },
+    {
+        "FlightNumber": "BA202",
+        "Origin": "London",
+        "Destination": "Chicago",
+        "DepartureTime": "2025-03-14T12:00:00",
+        "ArrivalTime": "2025-03-14T16:00:00",
+        "Price": 450.0,
+        "Airline": "British Airways",
+        "Duration": "4h",
+        "Layovers": false
+    },
+    {
+        "FlightNumber": "BA203",
+        "Origin": "Chicago",
+        "Destination": "London",
+        "DepartureTime": "2025-03-18T12:00:00",
+        "ArrivalTime": "2025-03-18T16:00:00",
+        "Price": 450.0,
+        "Airline": "British Airways",
+        "Duration": "4h",
+        "Layovers": false
+    },
+    {
+        "FlightNumber": "LH303",
+        "Origin": "Frankfurt",
+        "Destination": "Chicago",
+        "DepartureTime": "2025-03-14T13:00:00",
+        "ArrivalTime": "2025-03-14T17:00:00",
+        "Price": 500.0,
+        "Airline": "Lufthansa",
+        "Duration": "4h",
+        "Layovers": false
+    },
+    {
+        "FlightNumber": "LH304",
+        "Origin": "Chicago",
+        "Destination": "Frankfurt",
+        "DepartureTime": "2025-03-17T13:00:00",
+        "ArrivalTime": "2025-03-17T17:00:00",
+        "Price": 500.0,
+        "Airline": "Lufthansa",
+        "Duration": "4h",
+        "Layovers": false
+    },
+    {
+        "FlightNumber": "AF404",
+        "Origin": "Paris",
+        "Destination": "Chicago",
+        "DepartureTime": "2025-03-14T14:00:00",
+        "ArrivalTime": "2025-03-14T18:00:00",
+        "Price": 475.0,
+        "Airline": "Air France",
+        "Duration": "4h",
+        "Layovers": false
+    },
+    {
+        "FlightNumber": "AF405",
+        "Origin": "Chicago",
+        "Destination": "Paris",
+        "DepartureTime": "2025-03-18T14:00:00",
+        "ArrivalTime": "2025-03-18T18:00:00",
+        "Price": 475.0,
+        "Airline": "Air France",
+        "Duration": "4h",
+        "Layovers": false
+    },
+    {
+        "FlightNumber": "EK505",
+        "Origin": "Dubai",
+        "Destination": "Chicago",
+        "DepartureTime": "2025-03-14T15:00:00",
+        "ArrivalTime": "2025-03-14T19:00:00",
+        "Price": 600.0,
+        "Airline": "Emirates",
+        "Duration": "4h",
+        "Layovers": false
+    },
+    {
+        "FlightNumber": "EK506",
+        "Origin": "Chicago",
+        "Destination": "Dubai",
+        "DepartureTime": "2025-03-17T15:00:00",
+        "ArrivalTime": "2025-03-17T19:00:00",
+        "Price": 600.0,
+        "Airline": "Emirates",
+        "Duration": "4h",
+        "Layovers": false
+    }
+]
