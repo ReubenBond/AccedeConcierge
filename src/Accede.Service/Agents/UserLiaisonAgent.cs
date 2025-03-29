@@ -40,6 +40,13 @@ internal sealed partial class UserLiaisonAgent(
                     Do not ask the user if they would like to store the preference, just do it.
                     Preferences which have been stored previously do not need to be stored again.
 
+                    ## Trip request
+                    When the user expresses a travel plan, use the 'UpdateTripRequest' tool to store the plan.
+                    You can use the 'GetTripRequest' tool to retrieve the current trip request details if you need to review them.
+
+                    ## Trip itineraries
+                    When the trip request is updated, use the 'CreateCandidateItineraries' tool to generate candidate itineraries for the user.
+
                     ## Greeting the user
                     Use the 'SayHello' tool to greet the user.
                     """)
@@ -169,12 +176,56 @@ internal sealed partial class UserLiaisonAgent(
 
         if (candidate is not null)
         {
+            AddStatusMessage(candidate);
             return $"The best candidate itinerary is: {JsonSerializer.Serialize(candidate, JsonSerializerOptions.Web)}";
         }
         else
         {
             return "No suitable candidate itinerary was found.";
         }
+    }
+
+    [Tool, Description("Updates trip parameters based on user travel plans.")]
+    public async Task UpdateTripRequestAsync(
+        [Description("City where the trip originates")] string originCity,
+        [Description("State/province where the trip originates (optional)")] string? originState,
+        [Description("Country where the trip originates")] string originCountry,
+        [Description("Airport code for origin (optional)")] string? originAirportCode,
+        [Description("City of the destination")] string destinationCity,
+        [Description("State/province of the destination (optional)")] string? destinationState,
+        [Description("Country of the destination")] string destinationCountry,
+        [Description("Airport code for destination (optional)")] string? destinationAirportCode,
+        [Description("Start date of the trip")] DateTime startDate,
+        [Description("End date of the trip")] DateTime endDate,
+        [Description("Whether flight booking is needed")] bool needsFlight = true,
+        [Description("Whether hotel booking is needed")] bool needsHotel = true,
+        [Description("Whether car rental is needed")] bool needsCarRental = false,
+        [Description("Number of travelers")] int numberOfTravelers = 1,
+        [Description("A user-friendly message describing this update")] string message = "Trip details updated",
+        CancellationToken cancellationToken = default)
+    {
+        var parameters = new TripParameters(
+            new Location(originCity, originState, originCountry, originAirportCode),
+            new Location(destinationCity, destinationState, destinationCountry, destinationAirportCode),
+            startDate,
+            endDate,
+            new TravelRequirements(needsFlight, needsHotel, needsCarRental, numberOfTravelers)
+        );
+
+        // Update the trip request
+        tripRequest.Value = parameters;
+
+        // Add a status message to inform the user
+        AddStatusMessage(new TripRequestUpdated(message) { Id = Guid.NewGuid().ToString("N") });
+
+        // Persist the changes
+        await WriteStateAsync(cancellationToken);
+    }
+
+    [Tool, Description("Retrieves the current trip request details.")]
+    public async Task<TripParameters?> GetTripRequestAsync(CancellationToken cancellationToken)
+    {
+        return tripRequest.Value;
     }
 }
 

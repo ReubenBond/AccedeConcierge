@@ -59,26 +59,31 @@ internal sealed class AgentAIFunction : AIFunction
         object? returnValue;
         if (FunctionDescriptor.IsDurableTask)
         {
-            var request = new ToolCallRequest
+            var task = new Task<Task<object?>>(async () =>
             {
-                Arguments = arguments?.ToArray() ?? [],
-                Context = new DurableTaskRequestContext { CallerId = GrainContext.GrainId, TargetId = GrainContext.GrainId },
-                ToolName = FunctionDescriptor.Name
-            };
+                var request = new ToolCallRequest
+                {
+                    Arguments = arguments?.ToArray() ?? [],
+                    Context = new DurableTaskRequestContext { CallerId = GrainContext.GrainId, TargetId = GrainContext.GrainId },
+                    ToolName = FunctionDescriptor.Name
+                };
 
-            var taskId = TaskId.Create(DurableFunctionInvokingChatClient.CurrentContext!.CallContent.CallId);
+                var taskId = TaskId.Create(DurableFunctionInvokingChatClient.CurrentContext!.CallContent.CallId);
 
-            var scheduler = GrainContext.GetComponent<IDurableTaskGrainExtension>()!;
+                var scheduler = GrainContext.GetComponent<IDurableTaskGrainExtension>()!;
 
-            // TODO: Use Polly for RPC resilience
-            var response = await scheduler.ScheduleAsync(taskId, request, cancellationToken);
-            while (!response.IsCompleted)
-            {
                 // TODO: Use Polly for RPC resilience
-                response = await scheduler.SubscribeOrPollAsync(taskId, SubscribeOrPollOptions, cancellationToken);
-            }
+                var response = await scheduler.ScheduleAsync(taskId, request, cancellationToken);
+                while (!response.IsCompleted)
+                {
+                    // TODO: Use Polly for RPC resilience
+                    response = await scheduler.SubscribeOrPollAsync(taskId, SubscribeOrPollOptions, cancellationToken);
+                }
 
-            returnValue = response.Result;
+                return response.Result;
+            });
+            GrainContext.Scheduler.QueueTask(task);
+            returnValue = await task.Unwrap();
         }
         else
         {

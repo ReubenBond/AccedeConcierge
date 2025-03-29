@@ -64,4 +64,13 @@ public sealed class UserPreferenceUpdated(string text) : ChatItem(text)
 }
 
 [GenerateSerializer]
+public sealed class TripRequestUpdated(string text) : ChatItem(text)
+{
+    public override string Type => "trip-request-updated";
+    public override ChatRole Role => ChatRole.Tool;
+    public override bool IsUserVisible => true;
+    public override ChatMessage? ToChatMessage() => null;
+}
+
+[GenerateSerializer]
 public readonly record struct UriAttachment(string Uri, string ContentType);
