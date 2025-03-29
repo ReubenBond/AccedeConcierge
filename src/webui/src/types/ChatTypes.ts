@@ -19,6 +19,7 @@ export interface UserMessage extends BaseMessage {
 export interface AssistantMessage extends BaseMessage {
     role: 'assistant';
     type: 'assistant';
+    isFinal?: boolean;
 }
 
 // Preference updated message type
@@ -45,8 +46,4 @@ export type Message =
 export interface FileAttachment {
     uri: string;
     contentType: string;
-}
-
-export interface MessageFragment extends BaseMessage {
-    isFinal: boolean;
 }

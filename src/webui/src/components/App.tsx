@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ChatService from '../services/ChatService';
-import { Message, MessageFragment, FileAttachment } from '../types/ChatTypes';
+import { Message, AssistantMessage, FileAttachment } from '../types/ChatTypes';
 import ChatContainer from './ChatContainer';
 import VirtualizedChatList from './VirtualizedChatList';
 import logo from '../logo.svg';
@@ -33,26 +33,33 @@ const App: React.FC = () => {
                 
                 let currentResponseId: string | null = null;
                 
-                for await (const fragment of stream) {
-                    // Skip fragments without a type
-                    if (!fragment.type) continue;
+                for await (const message of stream) {
+                    // Skip messages without a type
+                    if (!message.type) continue;
                     
                     // Check if this is a new streaming response or continuation
-                    if (fragment.responseId && fragment.responseId !== currentResponseId) {
-                        currentResponseId = fragment.responseId;
-                        if (!fragment.isFinal) {
-                            setStreamingMessageId(currentResponseId);
+                    if (message.responseId && message.responseId !== currentResponseId) {
+                        currentResponseId = message.responseId;
+                        if (message.type === 'assistant') {
+                            const assistantMsg = message as AssistantMessage;
+                            if (!assistantMsg.isFinal) {
+                                setStreamingMessageId(currentResponseId);
+                            }
                         }
                     }
                     
-                    if (fragment.isFinal) {
-                        setStreamingMessageId(null);
-                        currentResponseId = null;
-                        if (!fragment.text) continue;
+                    // For assistant messages, check if they're final
+                    if (message.type === 'assistant') {
+                        const assistantMsg = message as AssistantMessage;
+                        if (assistantMsg.isFinal) {
+                            setStreamingMessageId(null);
+                            currentResponseId = null;
+                            if (!assistantMsg.text) continue;
+                        }
                     }
 
-                    // Process message based on the ChatItem type
-                    processMessageFragment(fragment);
+                    // Process message
+                    processMessage(message);
                 }
             } catch (error) {
                 console.error('Stream error:', error);
@@ -67,39 +74,31 @@ const App: React.FC = () => {
         };
     }, [chatService]);
 
-    // Process message fragments from the stream
-    const processMessageFragment = (fragment: MessageFragment) => {
-        // If it's a user message
-        if (fragment.type === 'user') {
+    // Process messages from the stream
+    const processMessage = (message: Message) => {
+        // If it's an assistant message, check isFinal
+        if (message.type === 'assistant') {
+            const assistantMsg = message as AssistantMessage;
             updateMessageById(
-                fragment.responseId || `user-${Date.now()}`,
-                fragment.text,
-                'user',
-                fragment.type,
-                true,
-                fragment.attachments
+                message.responseId || `assistant-${Date.now()}`,
+                message.text,
+                message.role,
+                message.type,
+                assistantMsg.isFinal || false,
+                message.attachments,
+                message
             );
         }
-        // If it's an assistant response
-        else if (fragment.type === 'assistant') {
-            updateMessageById(
-                fragment.responseId || `assistant-${Date.now()}`,
-                fragment.text,
-                'assistant',
-                fragment.type,
-                fragment.isFinal || false,
-                fragment.attachments
-            );
-        }
-        // Any other message type
+        // For all other message types (including candidate-itineraries)
         else {
             updateMessageById(
-                fragment.responseId || `${fragment.type}-${Date.now()}`,
-                fragment.text,
-                fragment.role,
-                fragment.type,
-                true,
-                fragment.attachments
+                message.responseId || `${message.type}-${Date.now()}`,
+                message.text,
+                message.role,
+                message.type,
+                true, // Non-streaming messages are always final
+                message.attachments,
+                message // Pass the complete message to preserve all fields
             );
         }
     };
@@ -110,7 +109,8 @@ const App: React.FC = () => {
         role: string, 
         type: string, 
         isFinal: boolean = false, 
-        attachments: FileAttachment[] | undefined = undefined
+        attachments: FileAttachment[] | undefined = undefined,
+        originalMessage?: Message // New parameter to store the complete original message
     ) => {
         const generatingReplyMessageText = 'Generating reply...';
 
@@ -150,25 +150,32 @@ const App: React.FC = () => {
                 return prevMessages.map(msg =>
                     msg.responseId === id 
                         ? {
-                            ...msg,
+                            // Start with the complete original message if available
+                            ...(originalMessage || msg),
+                            // Update specific fields
                             text: getMessageText(msg.text, newText),
-                            isFinal: isFinal,
                             role: role || msg.role,
                             type: type || msg.type,
-                            attachments: attachments || msg.attachments
+                            attachments: attachments || msg.attachments,
+                            // For assistant messages, update isFinal
+                            ...(type === 'assistant' ? { isFinal } : {})
                         }
                         : msg
                 );
             } else {
                 return [...prevMessages.filter(msg => msg.responseId !== loadingIndicatorId),
-                { 
-                    responseId: id, 
-                    role, 
-                    text: newText, 
-                    type: type, 
-                    isFinal: isFinal, 
-                    attachments: attachments 
-                }];
+                // If we have the original message, use it as the base; otherwise create one with provided fields
+                originalMessage ? 
+                    { ...originalMessage, responseId: id } : 
+                    { 
+                        responseId: id, 
+                        role, 
+                        text: newText, 
+                        type: type, 
+                        ...(type === 'assistant' ? { isFinal } : {}),
+                        attachments
+                    }
+                ];
             }
         });
     };

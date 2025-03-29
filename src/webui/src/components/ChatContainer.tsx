@@ -140,7 +140,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
                                 </ReactMarkdown>
                                 
                                 <div className="trip-options-container">
-                                    {candidateMsg.options.map((option, index) => 
+                                    {candidateMsg.options && candidateMsg.options.map((option, index) => 
                                         renderTripOption(option, index)
                                     )}
                                 </div>

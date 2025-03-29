@@ -1,11 +1,11 @@
 import { startTransition } from 'react';
-import { Message, MessageFragment } from '../types/ChatTypes';
+import { Message, AssistantMessage } from '../types/ChatTypes';
 import { UnboundedChannel } from '../utils/UnboundedChannel';
 
 class ChatService {
     private static instance: ChatService;
     private backendUrl: string;
-    private activeStream?: { eventSource: EventSource, channel: UnboundedChannel<MessageFragment> };
+    private activeStream?: { eventSource: EventSource, channel: UnboundedChannel<Message> };
 
     private constructor(backendUrl: string) {
         this.backendUrl = backendUrl;
@@ -21,7 +21,7 @@ class ChatService {
     async *stream(
         startIndex: number,
         abortController: AbortController
-    ): AsyncGenerator<MessageFragment> {
+    ): AsyncGenerator<Message> {
         const abortHandler = () => {
             console.log('Aborting chat stream');
             if (this.activeStream) {
@@ -36,7 +36,7 @@ class ChatService {
         let index = startIndex || 0;
         try {
             while (!abortController.signal.aborted) {
-                let channel = new UnboundedChannel<MessageFragment>();
+                let channel = new UnboundedChannel<Message>();
                 
                 try {
                     const eventSource = new EventSource(`${this.backendUrl}/chat/stream?startIndex=${index}`);
@@ -47,23 +47,25 @@ class ChatService {
                     // Handle messages
                     eventSource.addEventListener('message', (event) => {
                         try {
-                            const chatItem = JSON.parse(event.data);
-
-                            // Create a MessageFragment from the ChatItem
-                            const fragment: MessageFragment = {
-                                role: chatItem.role,
-                                type: chatItem.type,
-                                text: chatItem.text,
-                                responseId: chatItem.responseId || "msg-" + index, 
-                                isFinal: chatItem.isFinal ?? true,
-                                attachments: chatItem.attachments || null
-                            };
-
-                            if (fragment.isFinal) {
-                                index++;
+                            // Parse the raw message data
+                            const rawMessage = JSON.parse(event.data);
+                            
+                            // Ensure the message has a responseId
+                            if (!rawMessage.responseId) {
+                                rawMessage.responseId = `msg-${index}`;
                             }
                             
-                            channel.write(fragment);
+                            // For assistant messages, track if they are final
+                            if (rawMessage.role === 'assistant' && rawMessage.type === 'assistant') {
+                                const assistantMsg = rawMessage as AssistantMessage;
+                                
+                                if (assistantMsg.isFinal) {
+                                    index++;
+                                }
+                            }
+                            
+                            // Pass through the message preserving all fields from the server
+                            channel.write(rawMessage);
                         } catch (error) {
                             console.error(`Error processing SSE message: ${error}`);
                         }
@@ -84,8 +86,8 @@ class ChatService {
                     });
 
                     try {
-                        for await (const fragment of channel) {
-                            yield fragment;
+                        for await (const message of channel) {
+                            yield message;
                         }
                     } finally {
                         eventSource.close();
