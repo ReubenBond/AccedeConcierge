@@ -58,7 +58,7 @@ public sealed class UserMessage(string text) : ChatItem(text)
 public sealed class UserPreferenceUpdated(string text) : ChatItem(text)
 {
     public override string Type => "preference-updated";
-    public override ChatRole Role => ChatRole.Tool;
+    public override ChatRole Role => ChatRole.Assistant;
     public override bool IsUserVisible => true;
     public override ChatMessage? ToChatMessage() => null;
 }
@@ -67,7 +67,7 @@ public sealed class UserPreferenceUpdated(string text) : ChatItem(text)
 public sealed class TripRequestUpdated(string text) : ChatItem(text)
 {
     public override string Type => "trip-request-updated";
-    public override ChatRole Role => ChatRole.Tool;
+    public override ChatRole Role => ChatRole.Assistant;
     public override bool IsUserVisible => true;
     public override ChatMessage? ToChatMessage() => null;
 }

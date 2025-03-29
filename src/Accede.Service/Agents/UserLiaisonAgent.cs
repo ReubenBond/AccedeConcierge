@@ -1,4 +1,5 @@
 ﻿using Accede.Service.Models;
+using Accede.Service.Utilities;
 using Microsoft.Extensions.AI;
 using Orleans.Concurrency;
 using Orleans.Journaling;
@@ -178,7 +179,15 @@ internal sealed partial class UserLiaisonAgent(
         if (candidate is not null)
         {
             AddStatusMessage(candidate);
-            return $"The best candidate itineraries are:\n{JsonSerializer.Serialize(candidate.Options, JsonSerializerOptions.Web)}";
+            //DurableFunctionInvokingChatClient.CurrentContext!.Terminate = true;
+            return
+                $"""
+                The best candidate itineraries are:
+                {JsonSerializer.Serialize(candidate.Options, JsonSerializerOptions.Web)}.";
+                ---
+                The customer has just been sent these candidate itineraries - do NOT reiterate them to the customer.
+                Instead, provide a cheery message asking them to select an option if it is suitable or to let you know what they'd like to modify.
+                """;
         }
         else
         {

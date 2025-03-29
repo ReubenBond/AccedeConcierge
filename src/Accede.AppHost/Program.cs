@@ -34,8 +34,8 @@ var backend = builder.AddProject<Projects.Accede_Service>("service")
 
 builder.AddNpmApp("webui", "../webui")
        .WithNpmPackageInstallation()
-       .WithHttpEndpoint(env: "PORT", port: 35_369)
-       .WithReverseProxy(backend.GetEndpoint("http"))
+       .WithHttpEndpoint(env: "PORT", port: 35_369, isProxied: false)
+       .WithEnvironment("BACKEND_URL", backend.GetEndpoint("http"))
        .WithExternalHttpEndpoints()
        .WithOtlpExporter();
 

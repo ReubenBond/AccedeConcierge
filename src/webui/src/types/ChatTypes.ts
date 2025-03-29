@@ -35,12 +35,19 @@ export interface CandidateItinerariesMessage extends BaseMessage {
     options: TripOption[];
 }
 
+// Candidate itineraries message type
+export interface TripRequestUpdatedMessage extends BaseMessage {
+    role: 'assistant';
+    type: 'trip-request-updated';
+}
+
 // Union type for all message types
 export type Message = 
     | UserMessage 
     | AssistantMessage 
     | PreferenceUpdatedMessage 
     | CandidateItinerariesMessage
+    | TripRequestUpdatedMessage
     | BaseMessage; // Fallback for other message types
 
 export interface FileAttachment {

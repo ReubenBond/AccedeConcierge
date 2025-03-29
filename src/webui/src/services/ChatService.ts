@@ -55,13 +55,16 @@ class ChatService {
                                 rawMessage.responseId = `msg-${index}`;
                             }
                             
-                            // For assistant messages, track if they are final
-                            if (rawMessage.role === 'assistant' && rawMessage.type === 'assistant') {
+                            // 'assistant' messages have an isFinal property which indicates if the message is final or not.
+                            // Non-final messages are used for streaming responses.
+                            let isFinal = true;
+                            if (rawMessage.role === 'assistant') {
                                 const assistantMsg = rawMessage as AssistantMessage;
-                                
-                                if (assistantMsg.isFinal) {
-                                    index++;
-                                }
+                                isFinal = assistantMsg.isFinal !== undefined ? assistantMsg.isFinal : true;
+                            }
+
+                            if (isFinal) {
+                                index++;
                             }
                             
                             // Pass through the message preserving all fields from the server

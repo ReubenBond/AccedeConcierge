@@ -247,6 +247,36 @@ html, body {
     color: #ffffff;
 }
 
+/* Special styling for candidate itineraries messages */
+.message[data-type="candidate-itineraries"] {
+    width: 100%;
+    margin-bottom: 2rem;
+}
+
+.message[data-type="candidate-itineraries"] .message-container {
+    max-width: 95%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.message[data-type="candidate-itineraries"] .message-content {
+    background: #EBF8FF;
+    border: 2px solid #BEE3F8;
+    padding: 16px 20px;
+    box-shadow: 0 4px 12px rgba(66, 153, 225, 0.15);
+    width: 100%;
+}
+
+.message[data-type="candidate-itineraries"] .message-content > p:first-child {
+    font-weight: 600;
+    color: #2B6CB0;
+    font-size: 1.1rem;
+    margin-top: 0;
+    border-bottom: 1px solid #BEE3F8;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+}
+
 .message-content pre {
     white-space: pre-wrap;
     word-wrap: break-word;
@@ -284,31 +314,39 @@ html, body {
     box-shadow: none;
 }
 
-/* Preference updated message styling */
-.message[data-type="preference-updated"] {
+.message.progress-message {
     margin-bottom: 0.25rem;
     width: 100%;
     display: flex;
     justify-content: center;
 }
 
-.message[data-type="preference-updated"] .message-container {
+.message.progress-message .message-container {
     max-width: 100%;
 }
 
-.message[data-type="preference-updated"] .message-content {
+.message.progress-message .message-content {
     background: none;
     border: none;
     color: #64748b;
     font-style: italic;
-    font-size: 0.85rem;
+    font-size: 1rem;
     padding: 2px 8px;
     text-align: center;
     box-shadow: none;
 }
 
-.message.preference-message .message-container {
+.message.progress-message .message-container {
     margin-bottom: 0.25rem;
+}
+
+.message.progress-message .message-content {
+    width: 100%;
+    max-width: 800px;
+}
+
+.message.progress-message {
+    margin-bottom: 1.5rem;
 }
 
 .message-form {
@@ -718,10 +756,5 @@ a:hover {
 
 .select-option-button:hover {
     background-color: #2b6cb0;
-}
-
-.message[data-type="candidate-itineraries"] .message-content {
-    width: 100%;
-    max-width: 800px;
 }
 

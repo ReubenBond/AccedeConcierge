@@ -30,11 +30,6 @@ internal sealed class TravelAgencyAgent(
         return Task.FromResult(systemPrompt);
     }
 
-    protected override Task<List<ChatItem>> OnChatIdleAsync(CancellationToken cancellationToken)
-    {
-        return Task.FromResult<List<ChatItem>>([]);
-    }
-
     [Tool, Description("Proposes an array of candidate trip plans for a customer.")]
     public async ValueTask ProposeCandidateTripPlansAsync(List<TripOption> options, CancellationToken cancellationToken)
     {

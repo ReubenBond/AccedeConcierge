@@ -5,6 +5,11 @@ import remarkBreaks from 'remark-breaks';
 import { Message, FileAttachment, CandidateItinerariesMessage } from '../types/ChatTypes';
 import { TripOption } from '../types/TripTypes';
 
+// Helper function to determine if a message is a progress type message
+const isProgressMessage = (messageType: string): boolean => {
+    return ['preference-updated', 'trip-request-updated'].includes(messageType);
+};
+
 interface ChatContainerProps {
     messages: Message[];
     prompt: string;
@@ -119,61 +124,15 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         );
     };
     
-    // Function to render messages with special handling for candidate itineraries
+    // Function to render messages with unified approach
     const renderMessages = () => {
         return messages.map(msg => {
-            // Special handling for candidate itineraries message type
-            if (msg.type === 'candidate-itineraries') {
-                const candidateMsg = msg as CandidateItinerariesMessage;
-                return (
-                    <div 
-                        key={msg.responseId} 
-                        className={`message ${msg.role}`}
-                        data-type={msg.type}
-                    >
-                        <div className="message-container">
-                            <div className="message-content">
-                                <ReactMarkdown 
-                                    remarkPlugins={[remarkGfm, remarkBreaks]}
-                                >
-                                    {msg.text}
-                                </ReactMarkdown>
-                                
-                                <div className="trip-options-container">
-                                    {candidateMsg.options && candidateMsg.options.map((option, index) => 
-                                        renderTripOption(option, index)
-                                    )}
-                                </div>
-                                
-                                {renderAttachments(msg.attachments)}
-                                <button 
-                                    className={`copy-message-button ${copiedMsgId === msg.responseId ? 'copied' : ''}`}
-                                    onClick={() => copyToClipboard(msg.text, msg.responseId)}
-                                    aria-label="Copy message"
-                                    title="Copy to clipboard"
-                                >
-                                    {copiedMsgId === msg.responseId ? (
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <polyline points="20 6 9 17 4 12"></polyline>
-                                        </svg>
-                                    ) : (
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                        </svg>
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                );
-            }
+            const isProgress = isProgressMessage(msg.type);
             
-            // Default rendering for other message types
             return (
                 <div 
                     key={msg.responseId} 
-                    className={`message ${msg.role} ${msg.type === 'preference-updated' ? 'preference-message' : ''}`}
+                    className={`message ${msg.role} ${isProgress ? 'progress-message' : ''}`}
                     data-type={msg.type}
                 >
                     <div className="message-container">
@@ -183,8 +142,20 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
                             >
                                 {msg.text}
                             </ReactMarkdown>
+                            
+                            {/* Render trip options only for candidate itineraries type */}
+                            {msg.type === 'candidate-itineraries' && (msg as CandidateItinerariesMessage).options && (
+                                <div className="trip-options-container">
+                                    {(msg as CandidateItinerariesMessage).options.map((option, index) => 
+                                        renderTripOption(option, index)
+                                    )}
+                                </div>
+                            )}
+                            
                             {renderAttachments(msg.attachments)}
-                            {msg.type !== 'preference-updated' && (
+                            
+                            {/* Don't show copy button for preference messages */}
+                            {!isProgress && (
                                 <button 
                                     className={`copy-message-button ${copiedMsgId === msg.responseId ? 'copied' : ''}`}
                                     onClick={() => copyToClipboard(msg.text, msg.responseId)}
