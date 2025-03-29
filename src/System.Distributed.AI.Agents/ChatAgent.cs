@@ -52,7 +52,7 @@ public abstract class ChatAgent : DurableGrain, IChatAgent
     protected void AddTool(Delegate toolFunc, string? toolName) => _toolRegistry.AddTool(toolFunc, toolName);
 
     protected abstract Task<List<ChatItem>> OnChatCreatedAsync(CancellationToken cancellationToken);
-    protected abstract Task<List<ChatItem>> OnChatIdleAsync(CancellationToken cancellationToken);
+    protected virtual Task<List<ChatItem>> OnChatIdleAsync(CancellationToken cancellationToken) => Task.FromResult<List<ChatItem>>([]);
     protected virtual ChatOptions ChatOptions { get; }
     protected IReadOnlyList<ChatItem> ConversationHistory => new ReadOnlyCollection<ChatItem>(_conversationHistory);
 
@@ -409,8 +409,7 @@ public abstract class ChatAgent : DurableGrain, IChatAgent
             var message = _conversationHistory[index];
             ++index;
 
-            // Responses come from the assistant - they do not include status responses, for example.
-            if (foundOurMessage && message.Role == ChatRole.Assistant)
+            if (foundOurMessage)
             {
                 return message;
             }

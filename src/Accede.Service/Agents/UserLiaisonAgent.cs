@@ -53,15 +53,6 @@ internal sealed partial class UserLiaisonAgent(
             ];
     }
 
-    protected override Task<List<ChatItem>> OnChatIdleAsync(CancellationToken cancellationToken)
-    {
-        // 
-
-        // Check whether the goal conditions are met.
-        // If not, provide more instruction to the language model to guide it towards that goal.
-        return Task.FromResult<List<ChatItem>>([]);
-    }
-
     [Tool, Description("Creates a greeting message for the user")]
     public async DurableTask<string> SayHello([Description("The user's name.")] string userName)
     {
@@ -112,6 +103,16 @@ internal sealed partial class UserLiaisonAgent(
     [Tool, Description("Creates a candidate itinerary for the user based on their travel preferences and plans.")]
     public async DurableTask<string> CreateCandidateItineraries(CancellationToken cancellationToken)
     {
+        // TODO: If the user has not provided their preferences or travel plans, prompt them to do so by
+        // returning an error message to the LLM.
+
+        // This method is a tool call made by the LLM.
+        // It implements a side conversation with a travel agency agent where the liaison (this agent)
+        // acts as an advocate for the user, conversing with the travel agency agent to find suitable
+        // candidate itineraries.
+        // Once a set of suitable itineraries are found, it saves them in the local chat history so the
+        // user can see them, and it returns to the LLM.
+
         // Craft an initial request for the travel agency agent based on the user's travel plans & request.
         List<ChatMessage> messages =
         [
@@ -177,7 +178,7 @@ internal sealed partial class UserLiaisonAgent(
         if (candidate is not null)
         {
             AddStatusMessage(candidate);
-            return $"The best candidate itinerary is: {JsonSerializer.Serialize(candidate, JsonSerializerOptions.Web)}";
+            return $"The best candidate itineraries are:\n{JsonSerializer.Serialize(candidate.Options, JsonSerializerOptions.Web)}";
         }
         else
         {

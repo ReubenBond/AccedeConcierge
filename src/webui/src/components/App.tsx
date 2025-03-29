@@ -228,6 +228,42 @@ const App: React.FC = () => {
         chatService.cancelChat();
     };
 
+    // Function to handle itinerary selection
+    const selectItinerary = async (optionId: string) => {
+        try {
+            // Create a confirmation message to show in the chat
+            const selectionMessage: Message = {
+                responseId: `selection-${Date.now()}`,
+                role: 'user',
+                text: `I've selected itinerary option: ${optionId}`,
+                type: 'user'
+            };
+            
+            // Add the selection message to the chat
+            setMessages(prevMessages => [...prevMessages, selectionMessage]);
+            
+            // Show loading message
+            setMessages(prevMessages => [
+                ...prevMessages,
+                { responseId: loadingIndicatorId, role: 'assistant', text: 'Processing your selection...', type: 'assistant' }
+            ]);
+            
+            // Send the selection to the API
+            await chatService.selectItinerary(optionId);
+        } catch (error) {
+            console.error('Error selecting itinerary:', error);
+            
+            // Show error message
+            setMessages(prev =>
+                prev.map(msg =>
+                    msg.responseId === loadingIndicatorId ? 
+                    { ...msg, text: 'There was an error processing your selection. Please try again.' } : 
+                    msg
+                )
+            );
+        }
+    };
+
     return (
         <div className="app-container">
             <header className="app-header">
@@ -261,6 +297,7 @@ const App: React.FC = () => {
                         chatId=""
                         selectedFiles={selectedFiles}
                         setSelectedFiles={setSelectedFiles}
+                        selectItinerary={selectItinerary}
                         renderMessages={() => (
                             <VirtualizedChatList messages={messages} />
                         )}

@@ -143,6 +143,26 @@ class ChatService {
             throw new Error('Failed to cancel chat');
         }
     }
+
+    async selectItinerary(optionId: string): Promise<void> {
+        const response = await fetch(`${this.backendUrl}/chat/select-itinerary`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ optionId })
+        });
+
+        if (!response.ok) {
+            let errorMessage;
+            try {
+                errorMessage = await response.text();
+            } catch (e) {
+                errorMessage = response.statusText;
+            }
+            throw new Error(`Error selecting itinerary: ${errorMessage}`);
+        }
+    }
 }
 
 export default ChatService;

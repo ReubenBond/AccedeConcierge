@@ -73,9 +73,9 @@ internal sealed class CandidateItineraryChatItem : ChatItem
 
     [Id(0)]
     public List<TripOption> Options { get; }
-    public override string Type => "assistant";
+    public override string Type => "candidate-itineraries";
     public override ChatRole Role => ChatRole.Assistant;
-    public override bool IsUserVisible => false;
+    public override bool IsUserVisible => true;
     public override ChatMessage? ToChatMessage()
     {
         var text =

@@ -64,7 +64,13 @@ internal sealed class AgentAIFunction : AIFunction
                 var request = new ToolCallRequest
                 {
                     Arguments = arguments?.ToArray() ?? [],
-                    Context = new DurableTaskRequestContext { CallerId = GrainContext.GrainId, TargetId = GrainContext.GrainId },
+                    Context = new DurableTaskRequestContext
+                    {
+                        // We removed the implementation of push callbacks in Orleans.DurableTask impl during a refactor,
+                        // Can uncomment this when it's re-implemented.
+                        /*CallerId = GrainContext.GrainId, */
+                        TargetId = GrainContext.GrainId
+                    },
                     ToolName = FunctionDescriptor.Name
                 };
 
