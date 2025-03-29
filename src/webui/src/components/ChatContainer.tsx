@@ -77,15 +77,34 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
                         <h4>Flights</h4>
                         {option.flights.map((flight, flightIdx) => (
                             <div key={flightIdx} className="flight-item">
-                                <p><strong>{flight.airline} {flight.flightNumber}</strong></p>
-                                <p>{flight.origin} → {flight.destination}</p>
-                                <p className="date-time">
-                                    {new Date(flight.departureTime).toLocaleDateString()} {new Date(flight.departureTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                    {' - '}
-                                    {new Date(flight.arrivalTime).toLocaleDateString()} {new Date(flight.arrivalTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                </p>
-                                {flight.cabinClass && <p>Class: <strong>{flight.cabinClass}</strong></p>}
-                                <p>Price: <span className="price-tag">${flight.price.toFixed(2)}</span></p>
+                                <div className="flight-header">
+                                    <strong>{flight.airline} {flight.flightNumber}</strong>
+                                </div>
+                                <div className="flight-route">
+                                    {flight.origin} → {flight.destination}
+                                </div>
+                                <div className="detail-row">
+                                    <span className="detail-label">Departure:</span>
+                                    <span className="detail-value date-time">
+                                        {new Date(flight.departureTime).toLocaleDateString()} {new Date(flight.departureTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                    </span>
+                                </div>
+                                <div className="detail-row">
+                                    <span className="detail-label">Arrival:</span>
+                                    <span className="detail-value date-time">
+                                        {new Date(flight.arrivalTime).toLocaleDateString()} {new Date(flight.arrivalTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                    </span>
+                                </div>
+                                {flight.cabinClass && (
+                                    <div className="detail-row">
+                                        <span className="detail-label">Class:</span>
+                                        <span className="detail-value"><strong>{flight.cabinClass}</strong></span>
+                                    </div>
+                                )}
+                                <div className="detail-row">
+                                    <span className="detail-label">Price:</span>
+                                    <span className="detail-value price-tag">${flight.price.toFixed(2)}</span>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -94,14 +113,56 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
                     {option.hotel && (
                         <div className="trip-section hotel">
                             <h4>Hotel</h4>
-                            <p><strong>{option.hotel.propertyName}</strong> ({option.hotel.chain})</p>
-                            <p>{option.hotel.address}</p>
-                            <p className="date-time">
-                                {new Date(option.hotel.checkIn).toLocaleDateString()} to {new Date(option.hotel.checkOut).toLocaleDateString()}
-                            </p>
-                            <p><strong>{option.hotel.nightCount} nights</strong>, {option.hotel.roomType}</p>
-                            <p><span className="price-tag">${option.hotel.pricePerNight.toFixed(2)}</span>/night (Total: <span className="price-tag">${option.hotel.totalPrice.toFixed(2)}</span>)</p>
-                            {option.hotel.breakfastIncluded && <p>✓ Breakfast included</p>}
+                            <div className="detail-row">
+                                <span className="detail-label">Property:</span>
+                                <span className="detail-value"><strong>{option.hotel.propertyName}</strong></span>
+                            </div>
+                            <div className="detail-row">
+                                <span className="detail-label">Chain:</span>
+                                <span className="detail-value">{option.hotel.chain}</span>
+                            </div>
+                            <div className="detail-row">
+                                <span className="detail-label">Address:</span>
+                                <span className="detail-value">{option.hotel.address}</span>
+                            </div>
+                            <div className="divider"></div>
+                            <div className="detail-row">
+                                <span className="detail-label">Check-in:</span>
+                                <span className="detail-value date-time">
+                                    {new Date(option.hotel.checkIn).toLocaleDateString()}
+                                </span>
+                            </div>
+                            <div className="detail-row">
+                                <span className="detail-label">Check-out:</span>
+                                <span className="detail-value date-time">
+                                    {new Date(option.hotel.checkOut).toLocaleDateString()}
+                                </span>
+                            </div>
+                            <div className="detail-row">
+                                <span className="detail-label">Duration:</span>
+                                <span className="detail-value"><strong>{option.hotel.nightCount} nights</strong></span>
+                            </div>
+                            <div className="detail-row">
+                                <span className="detail-label">Room Type:</span>
+                                <span className="detail-value">{option.hotel.roomType}</span>
+                            </div>
+                            <div className="divider"></div>
+                            <div className="detail-row">
+                                <span className="detail-label">Price per night:</span>
+                                <span className="detail-value price-tag">${option.hotel.pricePerNight.toFixed(2)}</span>
+                            </div>
+                            <div className="detail-row">
+                                <span className="detail-label">Total price:</span>
+                                <span className="detail-value price-tag">${option.hotel.totalPrice.toFixed(2)}</span>
+                            </div>
+                            {option.hotel.breakfastIncluded && (
+                                <div className="detail-row">
+                                    <span className="detail-label">Includes:</span>
+                                    <span className="detail-value">
+                                        <span className="check-icon">✓</span> Breakfast
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     )}
                     
@@ -109,17 +170,59 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
                     {option.car && (
                         <div className="trip-section car-rental">
                             <h4>Car Rental</h4>
-                            <p><strong>{option.car.company}</strong> - {option.car.carType}</p>
-                            <p>Pick-up: <strong>{option.car.pickupLocation}</strong></p>
-                            <p className="date-time">
-                                {new Date(option.car.pickupTime).toLocaleDateString()} {new Date(option.car.pickupTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                            </p>
-                            <p>Drop-off: <strong>{option.car.dropoffLocation}</strong></p> 
-                            <p className="date-time">
-                                {new Date(option.car.dropoffTime).toLocaleDateString()} {new Date(option.car.dropoffTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                            </p>
-                            <p><span className="price-tag">${option.car.dailyRate.toFixed(2)}</span>/day (Total: <span className="price-tag">${option.car.totalPrice.toFixed(2)}</span>)</p>
-                            {option.car.unlimitedMileage && <p>✓ Unlimited mileage</p>}
+                            <div className="detail-row">
+                                <span className="detail-label">Company:</span>
+                                <span className="detail-value"><strong>{option.car.company}</strong></span>
+                            </div>
+                            <div className="detail-row">
+                                <span className="detail-label">Car type:</span>
+                                <span className="detail-value">{option.car.carType}</span>
+                            </div>
+                            <div className="divider"></div>
+                            <div className="detail-row">
+                                <span className="detail-label">Pick-up:</span>
+                                <span className="detail-value">
+                                    <span className="location-icon">📍</span> 
+                                    {option.car.pickupLocation}
+                                </span>
+                            </div>
+                            <div className="detail-row">
+                                <span className="detail-label">Time:</span>
+                                <span className="detail-value date-time">
+                                    {new Date(option.car.pickupTime).toLocaleDateString()} {new Date(option.car.pickupTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                </span>
+                            </div>
+                            <div className="divider"></div>
+                            <div className="detail-row">
+                                <span className="detail-label">Drop-off:</span>
+                                <span className="detail-value">
+                                    <span className="location-icon">📍</span> 
+                                    {option.car.dropoffLocation}
+                                </span>
+                            </div> 
+                            <div className="detail-row">
+                                <span className="detail-label">Time:</span>
+                                <span className="detail-value date-time">
+                                    {new Date(option.car.dropoffTime).toLocaleDateString()} {new Date(option.car.dropoffTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                </span>
+                            </div>
+                            <div className="divider"></div>
+                            <div className="detail-row">
+                                <span className="detail-label">Daily rate:</span>
+                                <span className="detail-value price-tag">${option.car.dailyRate.toFixed(2)}</span>
+                            </div>
+                            <div className="detail-row">
+                                <span className="detail-label">Total price:</span>
+                                <span className="detail-value price-tag">${option.car.totalPrice.toFixed(2)}</span>
+                            </div>
+                            {option.car.unlimitedMileage && (
+                                <div className="detail-row">
+                                    <span className="detail-label">Features:</span>
+                                    <span className="detail-value">
+                                        <span className="check-icon">✓</span> Unlimited mileage
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
