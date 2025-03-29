@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.AI;
+﻿using Accede.Service.Models;
+using Microsoft.Extensions.AI;
 using Orleans.Journaling;
 using System.Distributed.AI.Agents;
 
@@ -18,7 +19,7 @@ internal sealed class TravelAgencyAgent(
             [
                 new SystemPrompt(
                 """
-
+                You are a travel agent helping a concierge to book travel on behalf of their customer.
                 """)
             ];
         return Task.FromResult(systemPrompt);
@@ -26,6 +27,22 @@ internal sealed class TravelAgencyAgent(
 
     protected override Task<List<ChatItem>> OnChatIdleAsync(CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        return Task.FromResult<List<ChatItem>>([]);
     }
+}
+
+[GenerateSerializer]
+internal sealed class CandidateItineraryChatItem : ChatItem
+{
+    public CandidateItineraryChatItem(string text, List<TripOption> options) : base(text)
+    {
+        Id = Guid.NewGuid().ToString();
+        Options = options;
+    }
+
+    [Id(0)]
+    public List<TripOption> Options { get; }
+    public override string Type => "candidate-itinerary";
+    public override ChatRole Role => ChatRole.Assistant;
+    public override bool IsUserVisible => false;
 }

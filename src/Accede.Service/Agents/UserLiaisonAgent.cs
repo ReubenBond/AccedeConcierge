@@ -5,6 +5,8 @@ using Orleans.Journaling;
 using System.ComponentModel;
 using System.Distributed.AI.Agents;
 using System.Distributed.DurableTasks;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 #pragma warning disable 1998
 
 namespace Accede.Service.Agents;
@@ -13,10 +15,11 @@ namespace Accede.Service.Agents;
 internal sealed partial class UserLiaisonAgent(
     ILogger<UserLiaisonAgent> logger,
     [FromKeyedServices("large")] IChatClient chatClient,
-    [FromKeyedServices("trip-request")] IDurableValue<TripParameters> tripRequest,
-    [FromKeyedServices("user-preferences")] IDurableDictionary<string, string> userPreferences)
+    [Memory("trip-request")] IDurableValue<TripParameters> tripRequest,
+    [Memory("user-preferences")] IDurableDictionary<string, string> userPreferences)
     : ChatAgent(logger, chatClient), IUserLiaisonAgent
 {
+    private IChatClient _chatClient = chatClient;
     public async ValueTask PostMessageAsync(ChatItem message, CancellationToken cancellationToken = default) => await AddMessageAsync(message, cancellationToken);
 
     protected override async Task<List<ChatItem>> OnChatCreatedAsync(CancellationToken cancellationToken)
@@ -45,8 +48,8 @@ internal sealed partial class UserLiaisonAgent(
 
     protected override Task<List<ChatItem>> OnChatIdleAsync(CancellationToken cancellationToken)
     {
-        if (tripRequest.Value // is not fully fleshed out) {
-            }
+        // 
+
         // Check whether the goal conditions are met.
         // If not, provide more instruction to the language model to guide it towards that goal.
         return Task.FromResult<List<ChatItem>>([]);
@@ -100,12 +103,78 @@ internal sealed partial class UserLiaisonAgent(
     }
 
     [Tool, Description("Creates a candidate itinerary for the user based on their travel preferences and plans.")]
-    public async DurableTask<string> CreateCandidateItineraries()
+    public async DurableTask<string> CreateCandidateItineraries(CancellationToken cancellationToken)
     {
         // Craft an initial request for the travel agency agent based on the user's travel plans & request.
-        // Submit the request to the travel agency agent.
-        // While the response does not include suitable candidate itineraries (matching the preferences & plans), iterate with the travel agency agent.
-        // Post the candidate itineraries to the chat history for the user and return them to the LLM as well.
+        List<ChatMessage> messages =
+        [
+            new ChatMessage(
+                ChatRole.System,
+                $"""
+                You are an advocate/agent for your customer. You are helping them to find suitable travel itineraries based on their preferences and plans.
+                You are conversing with a travel agent who will provide you with candidate itineraries based on what you tell them.
+                Each time you receive a candidate itinerary, check that it meets the customer's preferences and plans.
+                If it does not, ask the travel agent to rectify the itinerary.
+                Continue until you have found the best itinerary for your customer.
+                The customer has expressed the following preferences:
+
+                {JsonSerializer.Serialize(userPreferences, JsonSerializerOptions.Web)}
+
+                ---
+                The customer's travel plans are as follows:
+
+                {JsonSerializer.Serialize(tripRequest, JsonSerializerOptions.Web)}
+
+                Once a suitable candidate itinerary is found, say "Donezo" to end the conversation.
+                """),
+            new ChatMessage(
+                ChatRole.User,
+                $"""
+                Hello, I am a travel agent. I can find itineraries for you. How may I help you today?
+                """)
+            ];
+
+        var id = DurableExecutionContext.CurrentContext!.TaskId.ToString();
+        var travelAgent = GrainFactory.GetGrain<ITravelAgencyAgent>(id);
+        var iteration = 0;
+        CandidateItineraryChatItem? candidate = null;
+        while (iteration++ < 5)
+        {
+            var request = await _chatClient.GetResponseAsync(messages, cancellationToken: cancellationToken);
+
+            if (request.Text.Contains("Donezo") && candidate is not null)
+            {
+                break;
+            }
+
+            messages.AddRange(request.Messages);
+
+            // Submit the request to the travel agency agent.
+            var response = await travelAgent.SendRequestAsync(new UserMessage(request.Text) { Id = iteration.ToString() });
+
+            // Check if the response includes a suitable candidate itinerary
+            if (response is CandidateItineraryChatItem newCandidate)
+            {
+                candidate = newCandidate;
+            }
+
+            if (response.ToChatMessage() is { } responseMessage)
+            {
+                messages.Add(responseMessage);
+            }
+
+            // While the response does not include suitable candidate itineraries (matching the preferences & plans), iterate with the travel agency agent.
+            // Post the candidate itineraries to the chat history for the user and return them to the LLM as well.
+        }
+
+        if (candidate is not null)
+        {
+            return $"The best candidate itinerary is: {JsonSerializer.Serialize(candidate, JsonSerializerOptions.Web)}";
+        }
+        else
+        {
+            return "No suitable candidate itinerary was found.";
+        }
     }
 }
 

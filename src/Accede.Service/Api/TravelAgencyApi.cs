@@ -74,9 +74,10 @@ public static class TravelAgencyApi
             var grain = grains.GetGrain<IUserLiaisonAgent>(id);
             var text = request.Form["Text"].FirstOrDefault() ?? "";
             await grain.PostMessageAsync(new UserMessage(text)
-                {
-                    Attachments = uploads
-                });
+            {
+                Attachments = uploads,
+                Id = Guid.NewGuid().ToString()
+            });
             return Results.Ok();
         });
 

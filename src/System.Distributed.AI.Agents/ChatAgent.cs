@@ -378,8 +378,9 @@ public abstract class ChatAgent : DurableGrain, IChatAgent
         }
     }
 
-    public async DurableTask<ChatItem> SendRequestAsync(ChatItem request, CancellationToken cancellationToken)
+    public async DurableTask<ChatItem> SendRequestAsync(ChatItem request)
     {
+        var cancellationToken = CancellationToken.None;
         if (request.Role != ChatRole.User)
         {
             throw new ArgumentException("Only user messages can be sent to the chat agent.", nameof(request));
