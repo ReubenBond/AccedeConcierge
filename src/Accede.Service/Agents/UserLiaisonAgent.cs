@@ -3,6 +3,7 @@ using Microsoft.Extensions.AI;
 using Orleans.Concurrency;
 using Orleans.Journaling;
 using System.ComponentModel;
+using System.Diagnostics.Eventing.Reader;
 using System.Distributed.AI.Agents;
 using System.Distributed.DurableTasks;
 using System.Text.Json;
@@ -10,13 +11,18 @@ using System.Text.Json;
 
 namespace Accede.Service.Agents;
 
+[GenerateSerializer]
+internal readonly record struct UserLiaisonState(string? LastReceiptProcessedMessageId);
+
 [Reentrant]
 internal sealed partial class UserLiaisonAgent(
     ILogger<UserLiaisonAgent> logger,
     [FromKeyedServices("large")] IChatClient chatClient,
+    [Memory("state")] IDurableValue<UserLiaisonState> state,
     [Memory("trip-request")] IDurableValue<TripParameters> tripRequest,
     [Memory("user-preferences")] IDurableDictionary<string, string> userPreferences,
-    [Memory("trip-selection")] IDurableValue<TripOption> selectedItinerary)
+    [Memory("trip-selection")] IDurableValue<TripOption> selectedItinerary,
+    [Memory("receipts")] IDurableList<ReceiptData> receipts)
     : ChatAgent(logger, chatClient), IUserLiaisonAgent
 {
     private IChatClient _chatClient = chatClient;
@@ -47,6 +53,16 @@ internal sealed partial class UserLiaisonAgent(
                     ## Trip itineraries
                     When the trip request is updated, use the 'CreateCandidateItineraries' tool to generate candidate itineraries for the user.
 
+                    ## Receipt management
+                    When the user mentions expense reports or receipts:
+                    - Use 'GetReceipts' to retrieve existing receipts
+                    - Use 'ProcessReceiptUpload' when the user uploads an image of a receipt
+
+                    When an image is uploaded, use 'ProcessReceiptUpload' to extract the receipt data from the image.                    
+                    Be proactive in identifying receipt information from conversations, such as "I spent $50 on dinner at Restaurant X yesterday."
+                    If the user mentions an expense they made but has not provided any images, tell them that they need to upload a picture of the receipt in order for it to be expensed.
+                    Use the phrase "pics or it didn't happen" when doing so.
+                    
                     ## Greeting the user
                     Use the 'SayHello' tool to greet the user.
                     """)
@@ -241,6 +257,92 @@ internal sealed partial class UserLiaisonAgent(
     public async Task<TripOption?> GetSelectedItinerary(CancellationToken cancellationToken)
     {
         return selectedItinerary.Value;
+    }
+
+    [Tool, Description("Retrieves all stored receipts for the user.")]
+    public async Task<IReadOnlyList<ReceiptData>> GetReceiptsAsync(CancellationToken cancellationToken)
+    {
+        return receipts.AsReadOnly();
+    }
+
+    [Tool, Description("Extract expense reporting information from images of receipts which the user submitted in their most recent request.")]
+    public async DurableTask<string?> ProcessReceiptUploadAsync(
+        [Description("A user-friendly message describing this action")] string message = "Receipt image processed",
+        CancellationToken cancellationToken = default)
+    {
+        var index = 0;
+        var lastReceiptMessageId = state.Value.LastReceiptProcessedMessageId;
+        if (lastReceiptMessageId is not null)
+        {
+            foreach (var (i, item) in ConversationHistory.Index())
+            {
+                if (item.Id == lastReceiptMessageId)
+                {
+                    index = i + 1;
+                    break;
+                }
+            }
+        }
+
+        List<ReceiptData> foundReceipts = [];
+
+        // Scan through recent user messages to find attachments.
+        for (var i = index; i < ConversationHistory.Count; i++)
+        {
+            // For each image, process the image for receipt data.
+            var item = ConversationHistory[i];
+            if (item is UserMessage { Attachments.Count: > 0 } userMessage)
+            {
+                var chatMessage = userMessage.ToChatMessage();
+                if (chatMessage is null)
+                {
+                    continue;
+                }
+
+                foreach (var content in chatMessage.Contents)
+                {
+                    if (content is TextContent)
+                    {
+                        continue;
+                    }
+
+                    // Add the receipt to memory and continue until all images are processed.
+                    var chatResponse = await _chatClient.GetResponseAsync<ReceiptData?>(
+                        new ChatMessage(ChatRole.User, [new TextContent("Process this receipt image and extract the relevant data for reimbursement."), content]),
+                        cancellationToken: cancellationToken);
+
+                    if (chatResponse.TryGetResult(out var receiptData) && receiptData is not null)
+                    {
+                        foundReceipts.Add(receiptData);
+                    }
+                }
+            }
+
+            lastReceiptMessageId = item.Id;
+        }
+
+        string result;
+        if (foundReceipts.Count > 0)
+        {
+            result = foundReceipts.Count > 1 ? $"Processed {foundReceipts.Count} receipts." : "Processed receipt.";
+            AddMessage(new ReceiptsProcessedChatItem(result, foundReceipts)
+            {
+                Id = Guid.NewGuid().ToString("N"),
+            });
+
+            foreach (var receipt in foundReceipts)
+            {
+                receipts.Add(receipt);
+            }
+        }
+        else
+        {
+            result = "The uploaded image contained no receipt data.";
+        }
+
+        state.Value = state.Value with { LastReceiptProcessedMessageId = lastReceiptMessageId };
+        await WriteStateAsync(cancellationToken);
+        return result;
     }
 
     // Implement the SelectItineraryAsync method to handle itinerary selection

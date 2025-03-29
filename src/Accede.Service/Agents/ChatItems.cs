@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.AI;
+﻿using Accede.Service.Models;
+using Microsoft.Extensions.AI;
 using System.Diagnostics.CodeAnalysis;
 using System.Distributed.AI.Agents;
 
@@ -86,6 +87,26 @@ internal sealed class ItinerarySelectedChatItem(string text) : ChatItem(text)
     public override bool IsUserVisible => false;
     public override ChatMessage? ToChatMessage() => 
         new ChatMessage(ChatRole.User, $"I've selected itinerary option {OptionId}. Please reach out ");
+}
+
+/// <summary>
+/// Chat item representing a receipt that has been added to the user's collection
+/// </summary>
+[GenerateSerializer]
+public class ReceiptsProcessedChatItem : ChatItem
+{
+    public ReceiptsProcessedChatItem(string text, List<ReceiptData> receipts) : base(text)
+    {
+        ArgumentNullException.ThrowIfNull(receipts);
+        Receipts = receipts;
+    }
+
+    [Id(0)]
+    public List<ReceiptData> Receipts { get; }
+    public override ChatRole Role => ChatRole.Assistant;
+    public override string Type => "receipts-processed";
+    public override bool IsUserVisible => true;
+    public override ChatMessage? ToChatMessage() => null;
 }
 
 [GenerateSerializer]
