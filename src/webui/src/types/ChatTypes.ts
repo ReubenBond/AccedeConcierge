@@ -2,7 +2,7 @@ import { TripOption, Flight, Hotel, CarRental } from './TripTypes';
 
 // Base message interface
 export interface BaseMessage {
-    responseId: string;
+    id: string;
     text: string;
     role: string;
     type: string;

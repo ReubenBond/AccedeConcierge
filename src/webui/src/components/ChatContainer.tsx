@@ -23,7 +23,7 @@ interface ChatContainerProps {
     chatId: string;
     selectedFiles: File[];
     setSelectedFiles: (files: File[]) => void;
-    selectItinerary?: (optionId: string) => void;
+    selectItinerary?: (messageId: string, optionId: string) => void;
 }
 
 const ChatContainer: React.FC<ChatContainerProps> = ({
@@ -60,14 +60,13 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
     };
 
     // Function to handle itinerary selection
-    const handleItinerarySelect = (optionId: string) => {
+    const handleItinerarySelect = (messageId: string, optionId: string) => {
         if (selectItinerary) {
-            selectItinerary(optionId);
+            selectItinerary(messageId, optionId);
         }
     };
 
-    // Function to render a trip option
-    const renderTripOption = (option: TripOption, index: number) => {
+    const renderTripOption = (option: TripOption, index: number, messageId: string) => {
         return (
             <div key={option.optionId || index} className="trip-option">
                 <h3>Option {index + 1}: {option.description}</h3>
@@ -108,7 +107,6 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
                             </div>
                         ))}
                     </div>
-                    
                     {/* Hotel section if available */}
                     {option.hotel && (
                         <div className="trip-section hotel">
@@ -165,7 +163,6 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
                             )}
                         </div>
                     )}
-                    
                     {/* Car rental section if available */}
                     {option.car && (
                         <div className="trip-section car-rental">
@@ -230,7 +227,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
                     <p><strong>Total Cost: <span className="price-tag">${option.totalCost.toFixed(2)}</span></strong></p>
                     <button 
                         className="select-option-button"
-                        onClick={() => handleItinerarySelect(option.optionId)}
+                        onClick={() => handleItinerarySelect(messageId, option.optionId)}
                     >
                         Select this itinerary
                     </button>
@@ -246,7 +243,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
             
             return (
                 <div 
-                    key={msg.responseId} 
+                    key={msg.id} 
                     className={`message ${msg.role} ${isProgress ? 'progress-message' : ''}`}
                     data-type={msg.type}
                 >
@@ -262,7 +259,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
                             {msg.type === 'candidate-itineraries' && (msg as CandidateItinerariesMessage).options && (
                                 <div className="trip-options-container">
                                     {(msg as CandidateItinerariesMessage).options.map((option, index) => 
-                                        renderTripOption(option, index)
+                                        renderTripOption(option, index, msg.id)
                                     )}
                                 </div>
                             )}
@@ -272,12 +269,12 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
                             {/* Don't show copy button for preference messages */}
                             {!isProgress && (
                                 <button 
-                                    className={`copy-message-button ${copiedMsgId === msg.responseId ? 'copied' : ''}`}
-                                    onClick={() => copyToClipboard(msg.text, msg.responseId)}
+                                    className={`copy-message-button ${copiedMsgId === msg.id ? 'copied' : ''}`}
+                                    onClick={() => copyToClipboard(msg.text, msg.id)}
                                     aria-label="Copy message"
                                     title="Copy to clipboard"
                                 >
-                                    {copiedMsgId === msg.responseId ? (
+                                    {copiedMsgId === msg.id ? (
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                             <polyline points="20 6 9 17 4 12"></polyline>
                                         </svg>

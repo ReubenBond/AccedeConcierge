@@ -2,8 +2,6 @@ using Accede.Service.Agents;
 using Azure.Storage.Blobs;
 using Azure.Storage.Sas;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.Extensions.AI;
-using System.Distributed.AI.Agents;
 using System.Text.Json;
 
 namespace Accede.Service.Api;
@@ -67,17 +65,18 @@ public static class TravelAgencyApi
             }
         });
 
-        group.MapPost("/messages", async (HttpRequest request, [FromKeyedServices("uploads")] BlobServiceClient blobServiceClient, IGrainFactory grains) =>
+        group.MapPost("/messages", async (HttpRequest request, [FromKeyedServices("uploads")] BlobServiceClient blobServiceClient, IGrainFactory grains, CancellationToken cancellationToken) =>
         {
             var id = UserId;
-            var uploads = await GetFileUploads(id, request, blobServiceClient);
+            var uploads = await GetFileUploads(id, request, blobServiceClient, cancellationToken);
             var grain = grains.GetGrain<IUserLiaisonAgent>(id);
             var text = request.Form["Text"].FirstOrDefault() ?? "";
             await grain.PostMessageAsync(new UserMessage(text)
             {
                 Attachments = uploads,
                 Id = Guid.NewGuid().ToString()
-            });
+            },
+            cancellationToken);
             return Results.Ok();
         });
 
@@ -88,9 +87,25 @@ public static class TravelAgencyApi
 
             return Results.Ok();
         });
+
+        group.MapPost("/select-itinerary", async (SelectItineraryRequest request, IGrainFactory grains, CancellationToken cancellationToken) =>
+        {
+            try 
+            {
+                var id = UserId;
+                var grain = grains.GetGrain<IUserLiaisonAgent>(id);
+                await grain.SelectItineraryAsync(request.MessageId, request.OptionId, cancellationToken);
+                return Results.Ok();
+            }
+            catch (Exception ex)
+            {
+                app.Logger.LogError(ex, "Error selecting itinerary");
+                return Results.Problem("Error selecting itinerary", statusCode: 500);
+            }
+        });
     }
 
-    private static async Task<List<UriAttachment>> GetFileUploads(string userId, HttpRequest request, BlobServiceClient blobServiceClient)
+    private static async Task<List<UriAttachment>> GetFileUploads(string userId, HttpRequest request, BlobServiceClient blobServiceClient, CancellationToken cancellationToken)
     {
         List<UriAttachment> results = [];
         if (request.HasFormContentType && request.Form.Files.Count > 0)
@@ -99,11 +114,11 @@ public static class TravelAgencyApi
             {
                 if (blobServiceClient.AccountName == "devstoreaccount1")
                 {
-                    results.Add(new(await ConvertToDataUri(file.OpenReadStream(), file.ContentType), file.ContentType));
+                    results.Add(new(await ConvertToDataUri(file.OpenReadStream(), file.ContentType, cancellationToken), file.ContentType));
                 }
                 else
                 {
-                    results.Add(await UploadToBlobContainerAsync(userId, blobServiceClient, file));
+                    results.Add(await UploadToBlobContainerAsync(userId, blobServiceClient, file, cancellationToken));
                 }
             }
         }
@@ -111,15 +126,15 @@ public static class TravelAgencyApi
         return results;
     }
 
-    private static async Task<UriAttachment> UploadToBlobContainerAsync(string userId, BlobServiceClient blobServiceClient, IFormFile file)
+    private static async Task<UriAttachment> UploadToBlobContainerAsync(string userId, BlobServiceClient blobServiceClient, IFormFile file, CancellationToken cancellationToken)
     {
         var containerClient = blobServiceClient.GetBlobContainerClient("user-content");
-        await containerClient.CreateIfNotExistsAsync();
+        await containerClient.CreateIfNotExistsAsync(cancellationToken: cancellationToken);
 
         var extension = Path.GetExtension(file.FileName) ?? "jpg";
         var blobClient = containerClient.GetBlobClient($"{userId}/{Guid.CreateVersion7():N}.{extension}");
         await using var stream = file.OpenReadStream();
-        await blobClient.UploadAsync(stream, overwrite: true);
+        await blobClient.UploadAsync(stream, overwrite: true, cancellationToken);
 
         var sasBuilder = new BlobSasBuilder
         {
@@ -134,11 +149,13 @@ public static class TravelAgencyApi
         return new(blobClient.GenerateSasUri(sasBuilder).ToString(), file.ContentType);
     }
 
-    private static async ValueTask<string> ConvertToDataUri(Stream stream, string contentType)
+    private static async ValueTask<string> ConvertToDataUri(Stream stream, string contentType, CancellationToken cancellationToken)
     {
         using var memoryStream = new MemoryStream();
-        await stream.CopyToAsync(memoryStream);
+        await stream.CopyToAsync(memoryStream, cancellationToken);
         var base64 = Convert.ToBase64String(memoryStream.ToArray());
         return $"data:{contentType};base64,{base64}";
     }
+
+    public record SelectItineraryRequest(string MessageId, string OptionId);
 }

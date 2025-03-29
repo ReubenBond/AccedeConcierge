@@ -1,5 +1,4 @@
 ﻿using Accede.Service.Models;
-using Accede.Service.Utilities;
 using Microsoft.Extensions.AI;
 using Orleans.Concurrency;
 using Orleans.Journaling;
@@ -7,7 +6,6 @@ using System.ComponentModel;
 using System.Distributed.AI.Agents;
 using System.Distributed.DurableTasks;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 #pragma warning disable 1998
 
 namespace Accede.Service.Agents;
@@ -17,7 +15,8 @@ internal sealed partial class UserLiaisonAgent(
     ILogger<UserLiaisonAgent> logger,
     [FromKeyedServices("large")] IChatClient chatClient,
     [Memory("trip-request")] IDurableValue<TripParameters> tripRequest,
-    [Memory("user-preferences")] IDurableDictionary<string, string> userPreferences)
+    [Memory("user-preferences")] IDurableDictionary<string, string> userPreferences,
+    [Memory("trip-selection")] IDurableValue<TripOption> selectedItinerary)
     : ChatAgent(logger, chatClient), IUserLiaisonAgent
 {
     private IChatClient _chatClient = chatClient;
@@ -81,7 +80,7 @@ internal sealed partial class UserLiaisonAgent(
         [Description("A user-friendly message describing this action")] string message,
         CancellationToken cancellationToken)
     {
-        AddStatusMessage(new UserPreferenceUpdated(message) { Id = Guid.NewGuid().ToString("N") });
+        AddMessage(new UserPreferenceUpdated(message) { Id = Guid.NewGuid().ToString("N") });
 
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -178,7 +177,7 @@ internal sealed partial class UserLiaisonAgent(
 
         if (candidate is not null)
         {
-            AddStatusMessage(candidate);
+            AddMessage(candidate);
             //DurableFunctionInvokingChatClient.CurrentContext!.Terminate = true;
             return
                 $"""
@@ -226,7 +225,7 @@ internal sealed partial class UserLiaisonAgent(
         tripRequest.Value = parameters;
 
         // Add a status message to inform the user
-        AddStatusMessage(new TripRequestUpdated(message) { Id = Guid.NewGuid().ToString("N") });
+        AddMessage(new TripRequestUpdated(message) { Id = Guid.NewGuid().ToString("N") });
 
         // Persist the changes
         await WriteStateAsync(cancellationToken);
@@ -237,6 +236,45 @@ internal sealed partial class UserLiaisonAgent(
     {
         return tripRequest.Value;
     }
+
+    [Tool, Description("Gets the trip itinerary which the user has selected.")]
+    public async Task<TripOption?> GetSelectedItinerary(CancellationToken cancellationToken)
+    {
+        return selectedItinerary.Value;
+    }
+
+    // Implement the SelectItineraryAsync method to handle itinerary selection
+    public async ValueTask SelectItineraryAsync(string messageId, string optionId, CancellationToken cancellationToken = default)
+    {
+        logger.LogInformation("Selecting itinerary with ID {OptionId} from message {MessageId}", optionId, messageId);
+
+        TripOption? option = null;
+        foreach (var message in ConversationHistory)
+        {
+            if (message is CandidateItineraryChatItem candidateItinerary && candidateItinerary.Id == messageId)
+            {
+                option = candidateItinerary.Options.FirstOrDefault(option => option.OptionId == optionId);
+                break;
+            }
+        }
+
+        if (option is null)
+        {
+            throw new InvalidOperationException("Selected itinerary option not found");
+        }
+
+        selectedItinerary.Value = option;
+        
+        // Add a message to inform the system about the selection
+        AddMessage(new ItinerarySelectedChatItem($"Itinerary option {optionId} selected") 
+        { 
+            Id = Guid.NewGuid().ToString("N"),
+            MessageId = messageId,
+            OptionId = optionId 
+        });
+
+        await WriteStateAsync(cancellationToken);
+    }
 }
 
 internal interface IUserLiaisonAgent : IGrainWithStringKey
@@ -245,5 +283,6 @@ internal interface IUserLiaisonAgent : IGrainWithStringKey
     ValueTask CancelAsync(CancellationToken cancellationToken = default);
     ValueTask<bool> DeleteAsync(CancellationToken cancellationToken = default);
     IAsyncEnumerable<ChatItem> WatchChatHistoryAsync(int startIndex, CancellationToken cancellationToken = default);
+    ValueTask SelectItineraryAsync(string messageId, string optionId, CancellationToken cancellationToken = default);
 }
 

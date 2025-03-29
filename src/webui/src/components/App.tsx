@@ -38,8 +38,8 @@ const App: React.FC = () => {
                     if (!message.type) continue;
                     
                     // Check if this is a new streaming response or continuation
-                    if (message.responseId && message.responseId !== currentResponseId) {
-                        currentResponseId = message.responseId;
+                    if (message.id && message.id !== currentResponseId) {
+                        currentResponseId = message.id;
                         if (message.type === 'assistant') {
                             const assistantMsg = message as AssistantMessage;
                             if (!assistantMsg.isFinal) {
@@ -80,7 +80,7 @@ const App: React.FC = () => {
         if (message.type === 'assistant') {
             const assistantMsg = message as AssistantMessage;
             updateMessageById(
-                message.responseId || `assistant-${Date.now()}`,
+                message.id,
                 message.text,
                 message.role,
                 message.type,
@@ -92,7 +92,7 @@ const App: React.FC = () => {
         // For all other message types (including candidate-itineraries)
         else {
             updateMessageById(
-                message.responseId || `${message.type}-${Date.now()}`,
+                message.id,
                 message.text,
                 message.role,
                 message.type,
@@ -144,11 +144,11 @@ const App: React.FC = () => {
                 return prevMessages;
             }
             
-            const existingMessage = prevMessages.find(msg => msg.responseId === id);
+            const existingMessage = prevMessages.find(msg => msg.id === id);
             
             if (existingMessage) {
                 return prevMessages.map(msg =>
-                    msg.responseId === id 
+                    msg.id === id 
                         ? {
                             // Start with the complete original message if available
                             ...(originalMessage || msg),
@@ -163,12 +163,12 @@ const App: React.FC = () => {
                         : msg
                 );
             } else {
-                return [...prevMessages.filter(msg => msg.responseId !== loadingIndicatorId),
+                return [...prevMessages.filter(msg => msg.id !== loadingIndicatorId),
                 // If we have the original message, use it as the base; otherwise create one with provided fields
                 originalMessage ? 
-                    { ...originalMessage, responseId: id } : 
+                    { ...originalMessage, id } : 
                     { 
-                        responseId: id, 
+                        id, 
                         role, 
                         text: newText, 
                         type: type, 
@@ -197,7 +197,7 @@ const App: React.FC = () => {
 
         // Create a message object that includes file attachments if any
         const userMessage: UserMessage = {
-            responseId: `user-${Date.now()}`, 
+            id: `user-${Date.now()}`, 
             role: 'user', 
             text: prompt, 
             type: 'user',
@@ -211,7 +211,7 @@ const App: React.FC = () => {
 
         setMessages(prevMessages => [
             ...prevMessages,
-            { responseId: loadingIndicatorId, role: 'assistant', text: 'Generating reply...', type: 'assistant' }
+            { id: loadingIndicatorId, role: 'assistant', text: 'Generating reply...', type: 'assistant' }
         ]);
 
         try {
@@ -222,7 +222,7 @@ const App: React.FC = () => {
             console.error('handleSubmit error:', error);
             setMessages(prev =>
                 prev.map(msg =>
-                    msg.responseId === loadingIndicatorId ? { ...msg, text: '[Error in receiving response]' } : msg
+                    msg.id === loadingIndicatorId ? { ...msg, text: '[Error in receiving response]' } : msg
                 )
             );
         }
@@ -234,34 +234,23 @@ const App: React.FC = () => {
     };
 
     // Function to handle itinerary selection
-    const selectItinerary = async (optionId: string) => {
+    const selectItinerary = async (messageId: string, optionId: string) => {
         try {
-            // Create a confirmation message to show in the chat
-            const selectionMessage: Message = {
-                responseId: `selection-${Date.now()}`,
-                role: 'user',
-                text: `I've selected itinerary option: ${optionId}`,
-                type: 'user'
-            };
-            
-            // Add the selection message to the chat
-            setMessages(prevMessages => [...prevMessages, selectionMessage]);
-            
             // Show loading message
             setMessages(prevMessages => [
                 ...prevMessages,
-                { responseId: loadingIndicatorId, role: 'assistant', text: 'Processing your selection...', type: 'assistant' }
+                { id: loadingIndicatorId, role: 'assistant', text: 'Processing your selection...', type: 'assistant' }
             ]);
-            
+
             // Send the selection to the API
-            await chatService.selectItinerary(optionId);
+            await chatService.selectItinerary(messageId, optionId);
         } catch (error) {
             console.error('Error selecting itinerary:', error);
-            
+
             // Show error message
             setMessages(prev =>
                 prev.map(msg =>
-                    msg.responseId === loadingIndicatorId ? 
+                    msg.id === loadingIndicatorId ? 
                     { ...msg, text: 'There was an error processing your selection. Please try again.' } : 
                     msg
                 )

@@ -33,7 +33,7 @@ internal sealed class TravelAgencyAgent(
     [Tool, Description("Proposes an array of candidate trip plans for a customer.")]
     public async ValueTask ProposeCandidateTripPlansAsync(List<TripOption> options, CancellationToken cancellationToken)
     {
-        AddStatusMessage(new CandidateItineraryChatItem("Here are trips matching your requirements.", options));
+        AddMessage(new CandidateItineraryChatItem("Here are trips matching your requirements.", options));
         await WriteStateAsync(cancellationToken);
     }
 

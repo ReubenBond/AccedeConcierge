@@ -73,4 +73,20 @@ public sealed class TripRequestUpdated(string text) : ChatItem(text)
 }
 
 [GenerateSerializer]
+internal sealed class ItinerarySelectedChatItem(string text) : ChatItem(text)
+{
+    [Id(0)]
+    public required string MessageId { get; init; }
+    
+    [Id(1)]
+    public required string OptionId { get; init; }
+
+    public override string Type => "itinerary-selected";
+    public override ChatRole Role => ChatRole.User;
+    public override bool IsUserVisible => false;
+    public override ChatMessage? ToChatMessage() => 
+        new ChatMessage(ChatRole.User, $"I've selected itinerary option {OptionId}. Please reach out ");
+}
+
+[GenerateSerializer]
 public readonly record struct UriAttachment(string Uri, string ContentType);

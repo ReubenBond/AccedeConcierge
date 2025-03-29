@@ -50,11 +50,6 @@ class ChatService {
                             // Parse the raw message data
                             const rawMessage = JSON.parse(event.data);
                             
-                            // Ensure the message has a responseId
-                            if (!rawMessage.responseId) {
-                                rawMessage.responseId = `msg-${index}`;
-                            }
-                            
                             // 'assistant' messages have an isFinal property which indicates if the message is final or not.
                             // Non-final messages are used for streaming responses.
                             let isFinal = true;
@@ -149,13 +144,13 @@ class ChatService {
         }
     }
 
-    async selectItinerary(optionId: string): Promise<void> {
+    async selectItinerary(messageId: string, optionId: string): Promise<void> {
         const response = await fetch(`${this.backendUrl}/chat/select-itinerary`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ optionId })
+            body: JSON.stringify({ messageId, optionId })
         });
 
         if (!response.ok) {

@@ -88,7 +88,7 @@ public abstract class ChatAgent : DurableGrain, IChatAgent
         _pendingMessageEvent.SignalAndReset();
     }
 
-    protected void AddStatusMessage(ChatItem item)
+    protected void AddMessage(ChatItem item)
     {
         var lastItem = _conversationHistory.LastOrDefault();
         if (lastItem is { Text: { } text } && text == item.Text)
@@ -389,7 +389,7 @@ public abstract class ChatAgent : DurableGrain, IChatAgent
         // Only add the message if it hasn't been added before.
         if (!_pendingMessages.Any(item => item.Id == request.Id) && !_conversationHistory.Any(item => item.Id == request.Id))
         {
-            AddStatusMessage(request);
+            AddMessage(request);
             await WriteStateAsync(cancellationToken);
         }
 
