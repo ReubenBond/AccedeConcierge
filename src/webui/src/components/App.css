@@ -664,63 +664,82 @@ a:hover {
 .trip-options-container {
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    margin-top: 16px;
+    gap: 24px;
+    margin-top: 20px;
     width: 100%;
 }
 
 .trip-option {
     border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 16px;
-    background-color: #f8fafc;
-    transition: box-shadow 0.2s ease;
+    border-radius: 12px;
+    padding: 0;
+    background-color: #ffffff;
+    transition: all 0.2s ease;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .trip-option:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(66, 153, 225, 0.15);
 }
 
 .trip-option h3 {
-    margin-top: 0;
-    margin-bottom: 12px;
+    margin: 0;
+    padding: 16px 20px;
     font-size: 18px;
-    color: #2c5282;
-    border-bottom: 1px solid #e2e8f0;
-    padding-bottom: 8px;
+    color: #2a4365;
+    background-color: #ebf8ff;
+    border-bottom: 1px solid #bee3f8;
 }
 
 .trip-option-details {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 16px;
-    margin-bottom: 16px;
+    padding: 20px;
 }
 
 .trip-section {
-    padding: 12px;
-    background-color: #ffffff;
-    border-radius: 6px;
-    border: 1px solid #edf2f7;
+    padding: 16px;
+    background-color: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+}
+
+.trip-section:hover {
+    border-color: #bee3f8;
+    box-shadow: 0 2px 8px rgba(66, 153, 225, 0.1);
 }
 
 .trip-section h4 {
     margin-top: 0;
-    margin-bottom: 12px;
-    color: #4a5568;
+    margin-bottom: 16px;
+    color: #3182ce;
     font-size: 16px;
+    font-weight: 600;
+    border-bottom: 1px dashed #cbd5e0;
+    padding-bottom: 8px;
 }
 
 .trip-section p {
-    margin: 6px 0;
+    margin: 8px 0;
     font-size: 14px;
     color: #4a5568;
+    line-height: 1.5;
+}
+
+.trip-section p strong {
+    color: #2d3748;
+    font-weight: 600;
 }
 
 .flight-item {
     border-bottom: 1px dashed #edf2f7;
-    padding-bottom: 12px;
-    margin-bottom: 12px;
+    padding-bottom: 14px;
+    margin-bottom: 14px;
+    position: relative;
 }
 
 .flight-item:last-child {
@@ -729,32 +748,100 @@ a:hover {
     padding-bottom: 0;
 }
 
+.flight-item::before {
+    content: '✈️';
+    position: absolute;
+    right: 8px;
+    top: 0px;
+    font-size: 16px;
+    opacity: 0.6;
+}
+
+.trip-section.hotel h4::before {
+    content: '🏨';
+    margin-right: 8px;
+}
+
+.trip-section.car-rental h4::before {
+    content: '🚗';
+    margin-right: 8px;
+}
+
+.trip-section.flights h4::before {
+    content: '✈️';
+    margin-right: 8px;
+}
+
 .trip-option-total {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 16px;
-    padding-top: 16px;
+    margin-top: 0;
+    padding: 16px 20px;
     border-top: 1px solid #e2e8f0;
+    background-color: #f9fafb;
 }
 
 .trip-option-total p {
     font-size: 18px;
     color: #2d3748;
+    font-weight: 500;
 }
 
 .select-option-button {
     background-color: #3182ce;
     color: white;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     padding: 10px 20px;
     font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .select-option-button:hover {
     background-color: #2b6cb0;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(49, 130, 206, 0.25);
+}
+
+.select-option-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(49, 130, 206, 0.25);
+}
+
+.select-option-button::after {
+    content: "→";
+    font-size: 18px;
+    transition: transform 0.2s ease;
+}
+
+.select-option-button:hover::after {
+    transform: translateX(3px);
+}
+
+/* Adding additional styling for special data elements */
+.price-tag {
+    font-weight: 600;
+    color: #3182ce;
+}
+
+.date-time {
+    font-family: 'Consolas', monospace;
+    color: #718096;
+    font-size: 0.9em;
+}
+
+.message[data-type="candidate-itineraries"] .message-content > p:first-child {
+    font-weight: 600;
+    color: #2B6CB0;
+    font-size: 1.1rem;
+    margin-top: 0;
+    border-bottom: 1px solid #BEE3F8;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
 }
 

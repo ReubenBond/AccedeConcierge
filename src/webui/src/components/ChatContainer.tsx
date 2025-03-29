@@ -79,9 +79,13 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
                             <div key={flightIdx} className="flight-item">
                                 <p><strong>{flight.airline} {flight.flightNumber}</strong></p>
                                 <p>{flight.origin} → {flight.destination}</p>
-                                <p>{new Date(flight.departureTime).toLocaleString()} - {new Date(flight.arrivalTime).toLocaleString()}</p>
-                                {flight.cabinClass && <p>Class: {flight.cabinClass}</p>}
-                                <p>Price: ${flight.price}</p>
+                                <p className="date-time">
+                                    {new Date(flight.departureTime).toLocaleDateString()} {new Date(flight.departureTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                    {' - '}
+                                    {new Date(flight.arrivalTime).toLocaleDateString()} {new Date(flight.arrivalTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                </p>
+                                {flight.cabinClass && <p>Class: <strong>{flight.cabinClass}</strong></p>}
+                                <p>Price: <span className="price-tag">${flight.price.toFixed(2)}</span></p>
                             </div>
                         ))}
                     </div>
@@ -92,10 +96,12 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
                             <h4>Hotel</h4>
                             <p><strong>{option.hotel.propertyName}</strong> ({option.hotel.chain})</p>
                             <p>{option.hotel.address}</p>
-                            <p>{new Date(option.hotel.checkIn).toLocaleDateString()} to {new Date(option.hotel.checkOut).toLocaleDateString()}</p>
-                            <p>{option.hotel.nightCount} nights, {option.hotel.roomType}</p>
-                            <p>${option.hotel.pricePerNight}/night (Total: ${option.hotel.totalPrice})</p>
-                            {option.hotel.breakfastIncluded && <p>Breakfast included</p>}
+                            <p className="date-time">
+                                {new Date(option.hotel.checkIn).toLocaleDateString()} to {new Date(option.hotel.checkOut).toLocaleDateString()}
+                            </p>
+                            <p><strong>{option.hotel.nightCount} nights</strong>, {option.hotel.roomType}</p>
+                            <p><span className="price-tag">${option.hotel.pricePerNight.toFixed(2)}</span>/night (Total: <span className="price-tag">${option.hotel.totalPrice.toFixed(2)}</span>)</p>
+                            {option.hotel.breakfastIncluded && <p>✓ Breakfast included</p>}
                         </div>
                     )}
                     
@@ -104,15 +110,21 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
                         <div className="trip-section car-rental">
                             <h4>Car Rental</h4>
                             <p><strong>{option.car.company}</strong> - {option.car.carType}</p>
-                            <p>Pick-up: {option.car.pickupLocation} at {new Date(option.car.pickupTime).toLocaleString()}</p>
-                            <p>Drop-off: {option.car.dropoffLocation} at {new Date(option.car.dropoffTime).toLocaleString()}</p>
-                            <p>${option.car.dailyRate}/day (Total: ${option.car.totalPrice})</p>
-                            {option.car.unlimitedMileage && <p>Unlimited mileage</p>}
+                            <p>Pick-up: <strong>{option.car.pickupLocation}</strong></p>
+                            <p className="date-time">
+                                {new Date(option.car.pickupTime).toLocaleDateString()} {new Date(option.car.pickupTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </p>
+                            <p>Drop-off: <strong>{option.car.dropoffLocation}</strong></p> 
+                            <p className="date-time">
+                                {new Date(option.car.dropoffTime).toLocaleDateString()} {new Date(option.car.dropoffTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </p>
+                            <p><span className="price-tag">${option.car.dailyRate.toFixed(2)}</span>/day (Total: <span className="price-tag">${option.car.totalPrice.toFixed(2)}</span>)</p>
+                            {option.car.unlimitedMileage && <p>✓ Unlimited mileage</p>}
                         </div>
                     )}
                 </div>
                 <div className="trip-option-total">
-                    <p><strong>Total Cost: ${option.totalCost}</strong></p>
+                    <p><strong>Total Cost: <span className="price-tag">${option.totalCost.toFixed(2)}</span></strong></p>
                     <button 
                         className="select-option-button"
                         onClick={() => handleItinerarySelect(option.optionId)}
