@@ -139,7 +139,8 @@ internal sealed partial class UserLiaisonAgent(
                 You are conversing with a travel agent who will provide you with candidate itineraries based on what you tell them.
                 Each time you receive a candidate itinerary, check that it meets the customer's preferences and plans.
                 If it does not, ask the travel agent to rectify the itinerary.
-                Continue until you have found the best itinerary for your customer.
+                Continue until you have found the a suitable itinerary for your customer.
+                Your customer is not too fussy, and it's ok if the itinerary does not match all of their needs.
                 The customer has expressed the following preferences:
 
                 {JsonSerializer.Serialize(userPreferences, JsonSerializerOptions.Web)}
@@ -184,6 +185,11 @@ internal sealed partial class UserLiaisonAgent(
 
             if (response.ToChatMessage() is { } responseMessage)
             {
+                if (responseMessage.Role != ChatRole.User)
+                {
+                    responseMessage = new ChatMessage(ChatRole.User, responseMessage.Contents);
+                }
+
                 messages.Add(responseMessage);
             }
 
@@ -267,12 +273,13 @@ internal sealed partial class UserLiaisonAgent(
 
     [Tool, Description("Extract expense reporting information from images of receipts which the user submitted in their most recent request.")]
     public async DurableTask<string?> ProcessReceiptUploadAsync(
+        [Description("Whether all receipts should be cleared and reprocessed.")] bool retryAll,
         [Description("A user-friendly message describing this action")] string message = "Receipt image processed",
         CancellationToken cancellationToken = default)
     {
         var index = 0;
         var lastReceiptMessageId = state.Value.LastReceiptProcessedMessageId;
-        if (lastReceiptMessageId is not null)
+        if (!retryAll && lastReceiptMessageId is not null)
         {
             foreach (var (i, item) in ConversationHistory.Index())
             {
@@ -306,14 +313,21 @@ internal sealed partial class UserLiaisonAgent(
                         continue;
                     }
 
-                    // Add the receipt to memory and continue until all images are processed.
-                    var chatResponse = await _chatClient.GetResponseAsync<ReceiptData?>(
-                        new ChatMessage(ChatRole.User, [new TextContent("Process this receipt image and extract the relevant data for reimbursement."), content]),
-                        cancellationToken: cancellationToken);
-
-                    if (chatResponse.TryGetResult(out var receiptData) && receiptData is not null)
+                    var attemptsRemaining = 2;
+                    while (attemptsRemaining > 0)
                     {
-                        foundReceipts.Add(receiptData);
+                        // Add the receipt to memory and continue until all images are processed.
+                        var chatResponse = await _chatClient.GetResponseAsync<ReceiptData?>(
+                            new ChatMessage(ChatRole.User, [new TextContent("Process this receipt image and extract the relevant data for reimbursement."), content]),
+                            cancellationToken: cancellationToken);
+
+                        if (chatResponse.TryGetResult(out var receiptData) && receiptData is not null)
+                        {
+                            foundReceipts.Add(receiptData);
+                            break;
+                        }
+
+                        --attemptsRemaining;
                     }
                 }
             }
@@ -329,6 +343,11 @@ internal sealed partial class UserLiaisonAgent(
             {
                 Id = Guid.NewGuid().ToString("N"),
             });
+
+            if (retryAll)
+            {
+                receipts.Clear();
+            }
 
             foreach (var receipt in foundReceipts)
             {

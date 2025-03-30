@@ -39,7 +39,7 @@ public enum BookingStatus
 [Description("Represents a change or modification made to an existing trip")]
 public record TripModification(
     [Description("Unique identifier for the modification")] string ModificationId,
-    [Description("Date and time when the modification was made")] DateTime ModifiedTime,
+    [Description("Date and time when the modification was made. Use ISO 8601 format.")] DateTime ModifiedTime,
     [Description("Type of modification (e.g., 'Change Date', 'Cancel Flight')")] string ModificationType,
     [Description("Human-readable description of the change")] string Description,
     [Description("Change in cost resulting from this modification")] float? CostChange,
@@ -51,7 +51,7 @@ public record TripModification(
 public record ApprovalDetails(
     [Description("Reference to the approved trip request")] string RequestId,
     [Description("ID of the person who approved the request")] string ApproverId,
-    [Description("Date and time when the approval was granted")] DateTime ApprovalTime,
+    [Description("Date and time when the approval was granted. Use ISO 8601 format.")] DateTime ApprovalTime,
     [Description("Maximum budget approved for the trip")] float ApprovedBudget,
     [Description("Additional notes from the approver")] string? Notes = null
 );

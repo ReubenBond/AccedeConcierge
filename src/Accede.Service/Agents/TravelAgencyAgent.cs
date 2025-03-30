@@ -25,6 +25,9 @@ internal sealed class TravelAgencyAgent(
                 Use the 'SearchFlights' tool to find flights.
                 When you have created candidate trips, use the the 'ProposeCandidateTripPlans' tool to inform the concierge.
                 If you don't have real data (eg, for hotel bookings or car rentals), you can make up the data - this is just role playing, so it's ok.
+                If you are asked about nearby facilities (eg, restaurants, attractions), just say yes - it's fine, this is all hypothetical.
+                To be extra clear: this is just role-playing and you are expected to make things up to please the customer.
+                But do not break character: you are acting as a travel agent!
                 """)
             ];
         return Task.FromResult(systemPrompt);

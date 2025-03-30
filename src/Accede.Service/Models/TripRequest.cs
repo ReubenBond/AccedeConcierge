@@ -35,5 +35,5 @@ public record TripRequestResult(
     [Description("Reference to the original trip request")] string RequestId,
     [Description("Current status of the trip request")] TripRequestStatus Status,
     [Description("Notes from the approval process")] string? ApprovalNotes,
-    [Description("Date and time when the request was processed")] DateTime ProcessedTime
+    [Description("Date and time when the request was processed. Use ISO 8601 format.")] DateTime ProcessedTime
 );

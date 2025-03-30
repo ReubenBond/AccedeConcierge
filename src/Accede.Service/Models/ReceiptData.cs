@@ -5,7 +5,7 @@ using System.ComponentModel;
 [GenerateSerializer]
 [Description("Represents receipt data for an expense transaction")]
 public record class ReceiptData(
-    [Description("Date and time when the transaction occurred")] DateTime TransactionDate,
+    [Description("Date and time when the transaction occurred. Use ISO 8601 format.")] DateTime TransactionDate,
     [Description("Pre-tax amount of the transaction")] float SubTotal,
     [Description("Total amount of the transaction including taxes")] float Total,
     [Description("Tax amount applied to the transaction")] float Tax,

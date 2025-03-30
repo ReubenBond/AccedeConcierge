@@ -7,8 +7,8 @@ using System.ComponentModel;
 public record TripParameters(
     [Description("Origin location for the trip")] Location Origin,
     [Description("Destination location for the trip")] Location Destination,
-    [Description("Starting date of the trip")] DateTime StartDate,
-    [Description("Ending date of the trip")] DateTime EndDate,
+    [Description("Starting date of the trip. Use ISO 8601 format.")] DateTime StartDate,
+    [Description("Ending date of the trip. Use ISO 8601 format.")] DateTime EndDate,
     [Description("Essential travel requirements")] TravelRequirements Requirements,
     [Description("Optional travel preferences")] TravelPreferences? Preferences = null
 );
