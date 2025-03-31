@@ -111,3 +111,21 @@ public class ReceiptsProcessedChatItem : ChatItem
 
 [GenerateSerializer]
 public readonly record struct UriAttachment(string Uri, string ContentType);
+
+[GenerateSerializer]
+internal sealed class TripRequestDecisionChatItem(TripRequestResult result) : ChatItem(GetTextForStatus(result.Status))
+{
+    [Id(0)]
+    public TripRequestResult Result { get; } = result;
+    public override string Type => "trip-approval-result";
+    public override ChatRole Role => ChatRole.Assistant;
+    public override bool IsUserVisible => true;
+    public override ChatMessage? ToChatMessage() => new ChatMessage(ChatRole.User, Text);
+    private static string GetTextForStatus(TripRequestStatus status) => status switch
+    {
+        TripRequestStatus.Approved => "Trip request approved.",
+        TripRequestStatus.Rejected => "Trip request rejected.",
+        _ => throw new NotSupportedException($"Unsupported trip request status: {status}")
+    };
+}
+

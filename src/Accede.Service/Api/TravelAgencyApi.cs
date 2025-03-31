@@ -1,7 +1,9 @@
 using Accede.Service.Agents;
+using Accede.Service.Models;
 using Azure.Storage.Blobs;
 using Azure.Storage.Sas;
 using Microsoft.AspNetCore.Http.Features;
+using System.Distributed.DurableTasks;
 using System.Text.Json;
 
 namespace Accede.Service.Api;
@@ -9,10 +11,48 @@ namespace Accede.Service.Api;
 public static class TravelAgencyApi
 {
     private const string UserId = "tiny-terry";
+    private const string AdminId = "admin";
 
     public static void MapTravelAgencyApi(this WebApplication app)
     {
         app.MapChatApi();
+        app.MapAdminApi();
+    }
+
+    // Maps the API which the Admin UI uses to manage trip requests
+    private static void MapAdminApi(this WebApplication app)
+    {
+        var group = app.MapGroup("/api/admin");
+
+        group.MapGet("/requests", async (IGrainFactory grains, CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var adminAgent = grains.GetGrain<IAdminAgent>(AdminId);
+                var requests = await adminAgent.GetRequestsAsync(cancellationToken);
+                return Results.Ok(requests);
+            }
+            catch (Exception ex)
+            {
+                app.Logger.LogError(ex, "Error fetching trip requests");
+                return Results.Problem("Error fetching trip requests", statusCode: 500);
+            }
+        });
+
+        group.MapPost("/requests/approval", async (TripRequestResult result, IGrainFactory grains, CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var adminAgent = grains.GetGrain<IAdminAgent>(AdminId);
+                await adminAgent.SubmitResultAsync(result, cancellationToken);
+                return Results.Ok();
+            }
+            catch (Exception ex)
+            {
+                app.Logger.LogError(ex, "Error submitting trip request result");
+                return Results.Problem("Error submitting trip request result", statusCode: 500);
+            }
+        });
     }
 
     // Maps the API which the Web UI uses to manage chat with the liaison.
@@ -94,7 +134,7 @@ public static class TravelAgencyApi
             {
                 var id = UserId;
                 var grain = grains.GetGrain<IUserLiaisonAgent>(id);
-                await grain.SelectItineraryAsync(request.MessageId, request.OptionId, cancellationToken);
+                await grain.SelectItineraryAsync(request.MessageId, request.OptionId).ScheduleAsync(cancellationToken);
                 return Results.Ok();
             }
             catch (Exception ex)
@@ -114,6 +154,8 @@ public static class TravelAgencyApi
             {
                 if (blobServiceClient.AccountName == "devstoreaccount1")
                 {
+                    // These URIs are sent to LLM APIs, which don't have access to the local storage emulator, so we need to convert
+                    // them to data URIs in that case.
                     results.Add(new(await ConvertToDataUri(file.OpenReadStream(), file.ContentType, cancellationToken), file.ContentType));
                 }
                 else

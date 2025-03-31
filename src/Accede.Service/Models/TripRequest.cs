@@ -3,13 +3,10 @@ namespace Accede.Service.Models;
 using System.ComponentModel;
 
 [GenerateSerializer]
-[Description("Request for booking a business trip")]
 public record TripRequest(
-    [Description("Unique identifier for the trip request")] string RequestId,
-    [Description("Travel requirements and specifications")] TripParameters Parameters,
-    [Description("Expected budget for the trip")] float EstimatedBudget,
-    [Description("Any supplementary information or special requests")] string AdditionalNotes
-);
+    string RequestId,
+    TripOption TripOption,
+    string? AdditionalNotes = null);
 
 [GenerateSerializer]
 [Description("Status of a trip request in its approval and booking lifecycle")]
@@ -21,10 +18,6 @@ public enum TripRequestStatus
     Approved,
     [Description("Request has been rejected")]
     Rejected,
-    [Description("Approved request is being processed")]
-    InProgress,
-    [Description("Trip has been successfully completed")]
-    Completed,
     [Description("Trip request has been cancelled")]
     Cancelled
 }
@@ -35,5 +28,4 @@ public record TripRequestResult(
     [Description("Reference to the original trip request")] string RequestId,
     [Description("Current status of the trip request")] TripRequestStatus Status,
     [Description("Notes from the approval process")] string? ApprovalNotes,
-    [Description("Date and time when the request was processed. Use ISO 8601 format.")] DateTime ProcessedTime
-);
+    [Description("Date and time when the request was processed. Use ISO 8601 format.")] DateTime ProcessedTime);

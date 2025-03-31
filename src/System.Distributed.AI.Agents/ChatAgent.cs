@@ -11,7 +11,6 @@ using System.Distributed.AI.Agents;
 using System.Distributed.AI.Agents.Tools;
 using System.Distributed.DurableTasks;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 
 namespace Accede.Service.Agents;
 
@@ -420,5 +419,9 @@ public abstract class ChatAgent : DurableGrain, IChatAgent
                 foundOurMessage = true;
             }
         }
+    }
+
+    protected void EnqueueNotification<T>(T destination, Func<T, Task> notificationFunc)
+    {
     }
 }
