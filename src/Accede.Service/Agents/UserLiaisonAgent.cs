@@ -385,7 +385,8 @@ internal sealed partial class UserLiaisonAgent(
             OptionId = optionId
         });
 
-        var result = await GrainFactory.GetGrain<IAdminAgent>("admin").RequestApproval(request);
+        var admin = GrainFactory.GetGrain<IAdminAgent>("admin");
+        var result = await admin.RequestApproval(request);
         tripApprovalStatus.Value = result;
         AddMessage(new TripRequestDecisionChatItem(result) { Id = $"approval-{result.RequestId}" });
     }

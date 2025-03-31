@@ -106,7 +106,7 @@
 .message-container {
     display: flex;
     flex-direction: column;
-    margin-bottom: 1.2rem;
+    margin-bottom: 1.0rem;
     position: relative;
     max-width: 75%;
     width: auto;
@@ -155,27 +155,7 @@
     font-family: 'Consolas', 'Monaco', monospace;
 }
 
-/* Status message styling */
-.message[data-type="status"] {
-    margin-bottom: 0.5rem;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-}
-
-.message[data-type="status"] .message-content {
-    background: none;
-    border: none;
-    color: #718096;
-    font-style: italic;
-    padding: 4px 8px;
-    max-width: 100%;
-    text-align: center;
-    box-shadow: none;
-}
-
 .message.progress-message {
-    margin-bottom: 0.25rem;
     width: 100%;
     display: flex;
     justify-content: center;
@@ -183,6 +163,7 @@
 
 .message.progress-message .message-container {
     max-width: 100%;
+    margin-bottom: 0.8rem;
 }
 
 .message.progress-message .message-content {
@@ -195,18 +176,14 @@
     text-align: center;
     box-shadow: none;
 }
-
-.message.progress-message .message-container {
-    margin-bottom: 0.25rem;
-}
-
 .message.progress-message .message-content {
     width: 100%;
     max-width: 800px;
 }
 
-.message.progress-message {
-    margin-bottom: 1.5rem;
+.message.progress-message p {
+    margin-top: 0.25rem;
+    margin-bottom: 0.25rem;
 }
 
 .message-content a {

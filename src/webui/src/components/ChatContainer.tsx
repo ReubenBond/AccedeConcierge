@@ -7,7 +7,7 @@ import { TripOption } from '../types/TripTypes';
 
 // Helper function to determine if a message is a progress type message
 const isProgressMessage = (messageType: string): boolean => {
-    return ['preference-updated', 'trip-request-updated'].includes(messageType);
+    return ['preference-updated', 'trip-request-updated', 'receipts-processed'].includes(messageType);
 };
 
 interface ChatContainerProps {
