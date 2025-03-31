@@ -1,3 +1,4 @@
+import { TripRequestResult } from './AdminTypes';
 import { TripOption, Flight, Hotel, CarRental } from './TripTypes';
 
 // Base message interface
@@ -35,10 +36,17 @@ export interface CandidateItinerariesMessage extends BaseMessage {
     options: TripOption[];
 }
 
-// Candidate itineraries message type
+// Trip request updated message type
 export interface TripRequestUpdatedMessage extends BaseMessage {
     role: 'assistant';
     type: 'trip-request-updated';
+}
+
+// Trip approval result message type
+export interface TripApprovalResultMessage extends BaseMessage {
+    role: 'assistant';
+    type: 'trip-approval-result';
+    result: TripRequestResult;
 }
 
 // Union type for all message types
@@ -48,6 +56,7 @@ export type Message =
     | PreferenceUpdatedMessage 
     | CandidateItinerariesMessage
     | TripRequestUpdatedMessage
+    | TripApprovalResultMessage
     | BaseMessage; // Fallback for other message types
 
 export interface FileAttachment {

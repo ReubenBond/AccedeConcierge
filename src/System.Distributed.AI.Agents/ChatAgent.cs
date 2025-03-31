@@ -420,8 +420,4 @@ public abstract class ChatAgent : DurableGrain, IChatAgent
             }
         }
     }
-
-    protected void EnqueueNotification<T>(T destination, Func<T, Task> notificationFunc)
-    {
-    }
 }

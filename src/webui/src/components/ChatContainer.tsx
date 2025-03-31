@@ -2,12 +2,74 @@ import React, { useEffect, ReactNode, RefObject, useState, useRef, ChangeEvent }
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
-import { Message, FileAttachment, CandidateItinerariesMessage } from '../types/ChatTypes';
+import { Message, FileAttachment, CandidateItinerariesMessage, TripApprovalResultMessage } from '../types/ChatTypes';
 import { TripOption } from '../types/TripTypes';
+import { TripRequestStatus } from '../types/AdminTypes';
 
 // Helper function to determine if a message is a progress type message
 const isProgressMessage = (messageType: string): boolean => {
     return ['preference-updated', 'trip-request-updated', 'receipts-processed'].includes(messageType);
+};
+
+// Helper function to get status-specific icon
+const getStatusIcon = (status: TripRequestStatus): JSX.Element => {
+    switch (status) {
+        case TripRequestStatus.Approved:
+            return (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+            );
+        case TripRequestStatus.Rejected:
+            return (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            );
+        case TripRequestStatus.Cancelled:
+            return (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            );
+        case TripRequestStatus.Pending:
+        default:
+            return (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            );
+    }
+};
+
+// Helper function to get status class name
+const getStatusClassName = (status: TripRequestStatus): string => {
+    switch (status) {
+        case TripRequestStatus.Approved:
+            return 'trip-status-approved';
+        case TripRequestStatus.Rejected:
+            return 'trip-status-rejected';
+        case TripRequestStatus.Cancelled:
+            return 'trip-status-cancelled';
+        case TripRequestStatus.Pending:
+        default:
+            return 'trip-status-pending';
+    }
+};
+
+// Helper function to get status title
+const getStatusTitle = (status: TripRequestStatus): string => {
+    switch (status) {
+        case TripRequestStatus.Approved:
+            return 'Trip Request Approved';
+        case TripRequestStatus.Rejected:
+            return 'Trip Request Rejected';
+        case TripRequestStatus.Cancelled:
+            return 'Trip Request Cancelled';
+        case TripRequestStatus.Pending:
+        default:
+            return 'Trip Request Pending';
+    }
 };
 
 interface ChatContainerProps {
@@ -236,6 +298,29 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         );
     };
     
+    // Function to render trip approval result message
+    const renderTripApprovalResult = (msg: TripApprovalResultMessage) => {
+        const { result } = msg;
+        const statusClass = getStatusClassName(result.status);
+        const statusIcon = getStatusIcon(result.status);
+        const statusTitle = getStatusTitle(result.status);
+        
+        return (
+            <div className={`message-content ${statusClass}`}>
+                <div className="status-icon">
+                    {statusIcon}
+                </div>
+                <div className="status-content">
+                    <h3 className="status-title">{statusTitle}</h3>
+                    <p className="status-details">
+                        {result.approvalNotes && `${result.approvalNotes} • `}
+                        Processed on {new Date(result.processedTime).toLocaleString()}
+                    </p>
+                </div>
+            </div>
+        );
+    };
+    
     // Function to render messages with unified approach
     const renderMessages = () => {
         return messages.map(msg => {
@@ -244,49 +329,55 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
             return (
                 <div 
                     key={msg.id} 
-                    className={`message ${msg.role} ${isProgress ? 'progress-message' : ''}`}
+                    className={`message ${msg.role} ${isProgress ? 'progress-message' : ''} ${
+                        msg.type === 'trip-approval-result' ? getStatusClassName((msg as TripApprovalResultMessage).result.status) : ''
+                    }`}
                     data-type={msg.type}
                 >
                     <div className="message-container">
-                        <div className="message-content">
-                            <ReactMarkdown 
-                                remarkPlugins={[remarkGfm, remarkBreaks]}
-                            >
-                                {msg.text}
-                            </ReactMarkdown>
-                            
-                            {/* Render trip options only for candidate itineraries type */}
-                            {msg.type === 'candidate-itineraries' && (msg as CandidateItinerariesMessage).options && (
-                                <div className="trip-options-container">
-                                    {(msg as CandidateItinerariesMessage).options.map((option, index) => 
-                                        renderTripOption(option, index, msg.id)
-                                    )}
-                                </div>
-                            )}
-                            
-                            {renderAttachments(msg.attachments)}
-                            
-                            {/* Don't show copy button for preference messages */}
-                            {!isProgress && (
-                                <button 
-                                    className={`copy-message-button ${copiedMsgId === msg.id ? 'copied' : ''}`}
-                                    onClick={() => copyToClipboard(msg.text, msg.id)}
-                                    aria-label="Copy message"
-                                    title="Copy to clipboard"
+                        {msg.type === 'trip-approval-result' ? (
+                            renderTripApprovalResult(msg as TripApprovalResultMessage)
+                        ) : (
+                            <div className="message-content">
+                                <ReactMarkdown 
+                                    remarkPlugins={[remarkGfm, remarkBreaks]}
                                 >
-                                    {copiedMsgId === msg.id ? (
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <polyline points="20 6 9 17 4 12"></polyline>
-                                        </svg>
-                                    ) : (
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                        </svg>
-                                    )}
-                                </button>
-                            )}
-                        </div>
+                                    {msg.text}
+                                </ReactMarkdown>
+                                
+                                {/* Render trip options only for candidate itineraries type */}
+                                {msg.type === 'candidate-itineraries' && (msg as CandidateItinerariesMessage).options && (
+                                    <div className="trip-options-container">
+                                        {(msg as CandidateItinerariesMessage).options.map((option, index) => 
+                                            renderTripOption(option, index, msg.id)
+                                        )}
+                                    </div>
+                                )}
+                                
+                                {renderAttachments(msg.attachments)}
+                                
+                                {/* Don't show copy button for preference messages */}
+                                {!isProgress && (
+                                    <button 
+                                        className={`copy-message-button ${copiedMsgId === msg.id ? 'copied' : ''}`}
+                                        onClick={() => copyToClipboard(msg.text, msg.id)}
+                                        aria-label="Copy message"
+                                        title="Copy to clipboard"
+                                    >
+                                        {copiedMsgId === msg.id ? (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg>
+                                        ) : (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                            </svg>
+                                        )}
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             );

@@ -1,0 +1,4 @@
+﻿[*.cs]
+
+# ORLEANS0010: Add missing [Alias]
+dotnet_diagnostic.ORLEANS0010.severity = none

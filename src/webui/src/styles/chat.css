@@ -52,6 +52,108 @@
     overflow: hidden;
 }
 
+/* Trip approval result styling */
+.message.trip-approval-result .message-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.message.trip-approval-result .message-content:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.status-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.status-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
+.status-content {
+    flex-grow: 1;
+}
+
+.status-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 5px 0;
+}
+
+.status-details {
+    margin: 0;
+}
+
+/* Status specific styles */
+.trip-status-approved .message-content {
+    background: linear-gradient(135deg, #e6f7eb, #d0f0d9);
+    border-left: 4px solid #38a169;
+}
+
+.trip-status-approved .status-icon {
+    background-color: #38a169;
+    color: white;
+}
+
+.trip-status-approved .status-title {
+    color: #2f855a;
+}
+
+.trip-status-rejected .message-content {
+    background: linear-gradient(135deg, #fed7d7, #feb2b2);
+    border-left: 4px solid #e53e3e;
+}
+
+.trip-status-rejected .status-icon {
+    background-color: #e53e3e;
+    color: white;
+}
+
+.trip-status-rejected .status-title {
+    color: #c53030;
+}
+
+.trip-status-cancelled .message-content {
+    background: linear-gradient(135deg, #feebc8, #fbd38d);
+    border-left: 4px solid #dd6b20;
+}
+
+.trip-status-cancelled .status-icon {
+    background-color: #dd6b20;
+    color: white;
+}
+
+.trip-status-cancelled .status-title {
+    color: #c05621;
+}
+
+.trip-status-pending .message-content {
+    background: linear-gradient(135deg, #e2e8f0, #cbd5e0);
+    border-left: 4px solid #4a5568;
+}
+
+.trip-status-pending .status-icon {
+    background-color: #4a5568;
+    color: white;
+}
+
+.trip-status-pending .status-title {
+    color: #2d3748;
+}
+
 /* Fixed position shadow elements that stay anchored to the viewport */
 .scroll-shadow-top,
 .scroll-shadow-bottom {
