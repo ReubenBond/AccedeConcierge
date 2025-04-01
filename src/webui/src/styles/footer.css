@@ -5,6 +5,10 @@
     padding: 16px 24px;
     color: #718096;
     font-size: 14px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    width: 100%;
+    /* Footer stays at the bottom of the flex container */
 }
 
 .footer-content {

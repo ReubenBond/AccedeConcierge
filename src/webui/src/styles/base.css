@@ -5,17 +5,21 @@ html, body {
     margin: 0;
     padding: 0;
     background-color: #f7f9fc;
-    overflow: hidden;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    height: 100%;
+    overflow: hidden; /* Prevent body scrolling */
 }
 
 .app-container {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    height: 100vh; /* Use viewport height */
     margin: 0;
+    padding-top: 64px; /* Space for fixed header */
     background-color: #f7f9fc;
     color: #333;
+    box-sizing: border-box;
+    overflow: hidden; /* Prevent container scrolling */
 }
 
 /* Main content styling */
@@ -23,7 +27,8 @@ html, body {
     flex: 1;
     display: flex;
     padding: 24px;
-    overflow: hidden;
+    overflow: auto; /* Allow content area to scroll */
+    box-sizing: border-box;
 }
 
 /* Link styling */
