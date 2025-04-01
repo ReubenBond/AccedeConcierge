@@ -163,6 +163,7 @@ internal sealed partial class UserLiaisonAgent(
         var id = DurableExecutionContext.CurrentContext!.TaskId.ToString();
         var travelAgent = GrainFactory.GetGrain<ITravelAgencyAgent>(id);
         var iteration = 0;
+        AddMessage(new TripRequestUpdated("Finding candidate itineraries....") { Id = Guid.NewGuid().ToString() });
         CandidateItineraryChatItem? candidate = null;
         while (iteration++ < 5)
         {
@@ -181,6 +182,7 @@ internal sealed partial class UserLiaisonAgent(
             // Check if the response includes a suitable candidate itinerary
             if (response is CandidateItineraryChatItem newCandidate)
             {
+                AddMessage(new TripRequestUpdated("Candidate found, validating it against your preferences and plans...") { Id = Guid.NewGuid().ToString() });
                 candidate = newCandidate;
             }
 
@@ -201,7 +203,6 @@ internal sealed partial class UserLiaisonAgent(
         if (candidate is not null)
         {
             AddMessage(candidate);
-            //DurableFunctionInvokingChatClient.CurrentContext!.Terminate = true;
             return
                 $"""
                 The best candidate itineraries are:
@@ -313,6 +314,7 @@ internal sealed partial class UserLiaisonAgent(
                         continue;
                     }
 
+                    AddMessage(new TripRequestUpdated("Analyzing receipt...") { Id = Guid.NewGuid().ToString() });
                     var attemptsRemaining = 2;
                     while (attemptsRemaining > 0)
                     {
@@ -329,6 +331,7 @@ internal sealed partial class UserLiaisonAgent(
                                 receiptData = receiptData with { ReceiptId = Guid.NewGuid().ToString("N") };
                             }
 
+                            AddMessage(new TripRequestUpdated("Success. Saving receipt details...") { Id = Guid.NewGuid().ToString() });
                             foundReceipts.Add(receiptData);
                             break;
                         }
@@ -378,7 +381,7 @@ internal sealed partial class UserLiaisonAgent(
         var request = selectedItinerary.Value = new($"req-{messageId}", option);
 
         // Add a message to inform the system about the selection
-        AddMessage(new ItinerarySelectedChatItem($"Itinerary option {optionId} selected")
+        AddMessage(new ItinerarySelectedChatItem($"Itinerary option {optionId} selected. Requesting admin approval.")
         {
             Id = Guid.NewGuid().ToString("N"),
             MessageId = messageId,
@@ -409,18 +412,6 @@ internal sealed partial class UserLiaisonAgent(
         }
 
         return option;
-    }
-}
-
-public readonly struct TransactionScope : IAsyncDisposable
-{
-    public ValueTask EnterAsync() => default;
-    public ValueTask DisposeAsync()
-    {
-        // release lock
-        // if an exception is being thrown, abort the transaction
-        // else, commit changes
-        return default;
     }
 }
 
