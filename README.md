@@ -25,7 +25,7 @@ _Earth's premiere Travel Booking and Expense reporting app_
     - **AzureOpenAI:ResourceGroup** - The name of your Azure Resource Group where the OpenAI Resource is deployed to
     - **AzureOpenAI:Name** - The name of your Azure OpenAI Resource
     - **AzureAIInference:Key** - Your Azure AI Inference Key
-    - **AzureAIInference:Endpoint** = Your Azure AI Inference Endpoint (i.e. https://YOUR-FOUNDRY-AI-INFERENCE-ENDPOINT/models)
+    - **AzureAIInference:Endpoint** - Your Azure AI Inference Endpoint (i.e. https://YOUR-FOUNDRY-AI-INFERENCE-ENDPOINT/models)
     - **Azure:SubscriptionId** - The subscription ID you deployed your resources to 
     - **Azure:ResourceGroup** - The name of your Azure OpenAI Resource is deployed to.
     - **Azure:Location** - The location you deployed your Azure OpenAI Resource to.
