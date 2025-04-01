@@ -2,6 +2,8 @@
 
 _Earth's premiere Travel Booking and Expense reporting app_
 
+![Screenshot of the main page](./assets/itinerary_example.jpeg)
+
 ## Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
