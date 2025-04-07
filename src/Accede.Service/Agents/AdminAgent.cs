@@ -14,11 +14,14 @@ internal interface IAdminAgent : IGrainWithStringKey
 
 public class AdminAgent(
     [FromKeyedServices("incoming-requests")] IDurableDictionary<string, TripRequest> requests,
-    [FromKeyedServices("completed-requests")] IDurableSet<string> completedRequests) : DurableGrain, IAdminAgent
+    [FromKeyedServices("completed-requests")] IDurableSet<string> processedRequests) : DurableGrain, IAdminAgent
 {
     public async DurableTask<TripRequestResult> RequestApproval(TripRequest request)
     {
-        if (completedRequests.Add(request.RequestId))
+        // If this request has not been processed yet, add it to the set of incoming requests. This
+        // check means that any subsequent requests with the same ID can just wait for the result,
+        // since we know that the request has been durably added to the processedRequests set.
+        if (processedRequests.Add(request.RequestId))
         {
             requests.TryAdd(request.RequestId, request);
             await WriteStateAsync();
@@ -32,15 +35,10 @@ public class AdminAgent(
     {
         var requestId = result.RequestId;
         cancellationToken.ThrowIfCancellationRequested();
-        var completion = GrainFactory.GetGrain<IDurableTaskCompletionSourceGrain<TripRequestResult>>(requestId);
-        if (await completion.TrySetResult(result))
-        {
-            if (!requests.Remove(requestId, out _))
-            {
-                return;
-            }
 
-            completedRequests.Add(requestId);
+        var completion = GrainFactory.GetGrain<IDurableTaskCompletionSourceGrain<TripRequestResult>>(requestId);
+        if (await completion.TrySetResult(result) && requests.Remove(requestId, out _))
+        {
             await WriteStateAsync(cancellationToken);
         }
     }
