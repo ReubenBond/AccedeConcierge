@@ -1,5 +1,8 @@
 ﻿using Accede.Service.Models;
 using Microsoft.Extensions.AI;
+using ModelContextProtocol;
+using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol.Transport;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Distributed.AI.Agents;
@@ -17,6 +20,28 @@ internal sealed class TravelAgencyAgent(
 {
     protected override Task<List<ChatItem>> OnChatCreatedAsync(CancellationToken cancellationToken)
     {
+        McpClientOptions mcpClientOptions = new()
+        { ClientInfo = new() { Name = "AspNetCoreSseClient", Version = "1.0.0" } };
+
+        // can't use the service discovery for ["https +http://aspnetsseserver"]
+        // fix: read the environment value for the key 'services__aspnetsseserver__https__0' to get the url for the aspnet core sse server
+        var serviceName = "McpServer";
+        var name = $"services__{serviceName}__https__0";
+        var url = Environment.GetEnvironmentVariable(name) + "/sse";
+
+        McpServerConfig mcpServerConfig = new()
+        {
+            Id = "AspNetCoreSse",
+            Name = "AspNetCoreSse",
+            TransportType = TransportTypes.Sse,
+            Location = url
+        };
+
+        var mcpClient = McpClientFactory.CreateAsync(mcpServerConfig, mcpClientOptions).GetAwaiter().GetResult();
+        var tools = mcpClient.ListToolsAsync().GetAwaiter().GetResult();
+        var currentTools = ChatOptions.Tools ?? [];
+        ChatOptions.Tools = [.. tools, .. currentTools];
+
         List<ChatItem> systemPrompt =
             [
                 new SystemPrompt(
@@ -30,6 +55,7 @@ internal sealed class TravelAgencyAgent(
                 But do not break character: you are acting as a travel agent!
                 """)
             ];
+
         return Task.FromResult(systemPrompt);
     }
 
@@ -40,23 +66,23 @@ internal sealed class TravelAgencyAgent(
         await WriteStateAsync(cancellationToken);
     }
 
-    [Tool, Description("Returns a list of available flights.")]
-    public async ValueTask<List<Flight>> SearchFlightsAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "flights.json");
-            string jsonData = await File.ReadAllTextAsync(filePath, cancellationToken);
-            
-            var flights = JsonSerializer.Deserialize<List<Flight>>(jsonData, JsonSerializerOptions.Web);
-            return flights ?? [];
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error loading flights from JSON file");
-            return [];
-        }
-    }
+    //[Tool, Description("Returns a list of available flights.")]
+    //public async ValueTask<List<Flight>> SearchFlightsAsync(CancellationToken cancellationToken)
+    //{
+    //    try
+    //    {
+    //        string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "flights.json");
+    //        string jsonData = await File.ReadAllTextAsync(filePath, cancellationToken);
+
+    //        var flights = JsonSerializer.Deserialize<List<Flight>>(jsonData, JsonSerializerOptions.Web);
+    //        return flights ?? [];
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        logger.LogError(ex, "Error loading flights from JSON file");
+    //        return [];
+    //    }
+    //}
 }
 
 [GenerateSerializer]

@@ -21,10 +21,14 @@ var azureStorage = builder.AddAzureStorage("storage").RunAsEmulator(c =>
 var orleans = builder.AddOrleans("orleans")
     .WithDevelopmentClustering();
 
+var mcpServer = builder.AddProject<Projects.MCPServer>("McpServer");
+
 var backend = builder.AddProject<Projects.Accede_Service>("service")
+    .WithReference(mcpServer)
     .WithReference(reasoningModel)
     .WithReference(smallModel)
     .WithReference(largeModel)
+    .WaitFor(mcpServer)
     .WaitFor(reasoningModel)
     .WaitFor(smallModel)
     .WaitFor(largeModel)
