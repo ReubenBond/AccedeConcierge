@@ -709,7 +709,7 @@ public partial class DurableFunctionInvokingChatClient : DelegatingChatClient
         try
         {
             CurrentContext = context;
-            result = await context.Function.InvokeAsync(context.CallContent.Arguments, cancellationToken).ConfigureAwait(false);
+            result = await context.Function.InvokeAsync(new (context.CallContent.Arguments), cancellationToken).ConfigureAwait(false);
         }
         catch (Exception e)
         {

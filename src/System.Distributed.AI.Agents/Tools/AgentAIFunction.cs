@@ -51,8 +51,8 @@ internal sealed class AgentAIFunction : AIFunction
     public override MethodInfo UnderlyingMethod => FunctionDescriptor.Method;
     public override JsonElement JsonSchema => FunctionDescriptor.JsonSchema;
     public override JsonSerializerOptions JsonSerializerOptions => FunctionDescriptor.JsonSerializerOptions;
-    protected override async Task<object?> InvokeCoreAsync(
-        IEnumerable<KeyValuePair<string, object?>>? arguments,
+    protected override async ValueTask<object?> InvokeCoreAsync(
+        AIFunctionArguments arguments,
         CancellationToken cancellationToken)
     {
         object? returnValue;

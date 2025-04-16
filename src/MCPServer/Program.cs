@@ -1,12 +1,16 @@
 ﻿using Accede.Service.Models;
-using Microsoft.Extensions.Logging;
+using Accede.ServiceDefaults;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddMcpServer()
+    .WithHttpTransport()
     .WithToolsFromAssembly();
+
+// Add service defaults & Aspire client integrations.
+builder.AddServiceDefaults();
 
 var app = builder.Build();
 
