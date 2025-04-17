@@ -1,5 +1,7 @@
 ﻿using Accede.Service.Models;
 using Microsoft.Extensions.AI;
+using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol.Transport;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Distributed.AI.Agents;
@@ -13,8 +15,33 @@ internal interface ITravelAgencyAgent : IChatAgent
 
 internal sealed class TravelAgencyAgent(
     ILogger<TravelAgencyAgent> logger,
-    [FromKeyedServices("large")] IChatClient chatClient) : ChatAgent(logger, chatClient), ITravelAgencyAgent
+    [FromKeyedServices("large")] IChatClient chatClient,
+    ILoggerFactory loggerFactory) : ChatAgent(logger, chatClient), ITravelAgencyAgent
 {
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
+    {
+        McpClientOptions mcpClientOptions = new()
+        { ClientInfo = new() { Name = "AspNetCoreSseClient", Version = "1.0.0" } };
+
+        // Ideally would use ServiceDiscovery here
+        var serviceName = "McpServer";
+        var name = $"services__{serviceName}__https__0";
+        var url = Environment.GetEnvironmentVariable(name) + "/sse";
+
+        var clientTransport = new SseClientTransport(new()
+        {
+            Name = "AspNetCoreSse",
+            Endpoint = new Uri(url),
+        }, loggerFactory);
+
+        var mcpClient = await McpClientFactory.CreateAsync(clientTransport, mcpClientOptions, loggerFactory);
+        var tools = await mcpClient.ListToolsAsync();
+        var currentTools = ChatOptions.Tools ?? [];
+        ChatOptions.Tools = [.. tools, .. currentTools];
+
+        await base.OnActivateAsync(cancellationToken);
+    }
+
     protected override Task<List<ChatItem>> OnChatCreatedAsync(CancellationToken cancellationToken)
     {
         List<ChatItem> systemPrompt =
@@ -30,6 +57,7 @@ internal sealed class TravelAgencyAgent(
                 But do not break character: you are acting as a travel agent!
                 """)
             ];
+
         return Task.FromResult(systemPrompt);
     }
 
@@ -38,24 +66,6 @@ internal sealed class TravelAgencyAgent(
     {
         AddMessage(new CandidateItineraryChatItem("Here are trips matching your requirements.", options));
         await WriteStateAsync(cancellationToken);
-    }
-
-    [Tool, Description("Returns a list of available flights.")]
-    public async ValueTask<List<Flight>> SearchFlightsAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "flights.json");
-            string jsonData = await File.ReadAllTextAsync(filePath, cancellationToken);
-            
-            var flights = JsonSerializer.Deserialize<List<Flight>>(jsonData, JsonSerializerOptions.Web);
-            return flights ?? [];
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error loading flights from JSON file");
-            return [];
-        }
     }
 }
 

@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Accede.Service\Accede.Service.csproj" />
+    <ProjectReference Include="..\MCPServer\MCPServer.csproj" />
   </ItemGroup>
 
   <ItemGroup>

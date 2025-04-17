@@ -55,7 +55,7 @@ public static class ChatClientExtensions
 
             var client = new ChatCompletionsClient(connectionInfo.Endpoint, credential, new AzureAIInferenceClientOptions());
 
-            return client.AsChatClient(connectionInfo.SelectedModel);
+            return client.AsIChatClient(connectionInfo.SelectedModel);
         });
     }
 
@@ -90,15 +90,21 @@ public static class ChatClientExtensions
         {
             ClientChatProvider.Ollama => builder.AddKeyedOllamaClient(connectionName, connectionInfo),
             ClientChatProvider.OpenAI => builder.AddKeyedOpenAIClient(connectionName, connectionInfo),
-            ClientChatProvider.AzureOpenAI => builder.AddKeyedAzureOpenAIClient(connectionName).AddKeyedChatClient(connectionName, connectionInfo.SelectedModel),
+            ClientChatProvider.AzureOpenAI => builder.AddKeyedAzureOpenAIClient(connectionName, s =>
+            {
+                s.DisableMetrics = false;
+                s.DisableTracing = false;
+            }).AddKeyedChatClient(connectionName, connectionInfo.SelectedModel),
             ClientChatProvider.AzureAIInference => builder.AddKeyedAzureInferenceClient(connectionName, connectionInfo),
             _ => throw new NotSupportedException($"Unsupported provider: {connectionInfo.Provider}")
         };
 
         // Add OpenTelemetry tracing for the ChatClient activity source
-        chatClientBuilder.UseOpenTelemetry().UseLogging();
+        chatClientBuilder
+            //.UseOpenTelemetry()
+            .UseLogging();
 
-        builder.Services.AddOpenTelemetry().WithTracing(t => t.AddSource("Experimental.Microsoft.Extensions.AI"));
+        builder.Services.AddOpenTelemetry().WithTracing(t => t.AddSource("Experimental.Microsoft.Extensions.AI")).WithMetrics(m => m.AddMeter("Experimental.Microsoft.Extensions.AI"));
 
         return chatClientBuilder;
     }
@@ -121,7 +127,7 @@ public static class ChatClientExtensions
 
             var client = new ChatCompletionsClient(connectionInfo.Endpoint, credential, new AzureAIInferenceClientOptions());
 
-            return client.AsChatClient(connectionInfo.SelectedModel);
+            return client.AsIChatClient(connectionInfo.SelectedModel);
         });
     }
 
