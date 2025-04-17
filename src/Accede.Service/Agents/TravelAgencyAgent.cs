@@ -1,7 +1,5 @@
 ﻿using Accede.Service.Models;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.ServiceDiscovery;
-using ModelContextProtocol;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol.Transport;
 using System.ComponentModel;
@@ -17,7 +15,8 @@ internal interface ITravelAgencyAgent : IChatAgent
 
 internal sealed class TravelAgencyAgent(
     ILogger<TravelAgencyAgent> logger,
-    [FromKeyedServices("large")] IChatClient chatClient) : ChatAgent(logger, chatClient), ITravelAgencyAgent
+    [FromKeyedServices("large")] IChatClient chatClient,
+    ILoggerFactory loggerFactory) : ChatAgent(logger, chatClient), ITravelAgencyAgent
 {
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
@@ -33,9 +32,9 @@ internal sealed class TravelAgencyAgent(
         {
             Name = "AspNetCoreSse",
             Endpoint = new Uri(url),
-        });
+        }, loggerFactory);
 
-        var mcpClient = await McpClientFactory.CreateAsync(clientTransport, mcpClientOptions);
+        var mcpClient = await McpClientFactory.CreateAsync(clientTransport, mcpClientOptions, loggerFactory);
         var tools = await mcpClient.ListToolsAsync();
         var currentTools = ChatOptions.Tools ?? [];
         ChatOptions.Tools = [.. tools, .. currentTools];
