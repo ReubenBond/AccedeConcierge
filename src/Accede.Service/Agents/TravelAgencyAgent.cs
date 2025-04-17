@@ -1,5 +1,6 @@
 ﻿using Accede.Service.Models;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.ServiceDiscovery;
 using ModelContextProtocol;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol.Transport;
@@ -23,8 +24,7 @@ internal sealed class TravelAgencyAgent(
         McpClientOptions mcpClientOptions = new()
         { ClientInfo = new() { Name = "AspNetCoreSseClient", Version = "1.0.0" } };
 
-        // can't use the service discovery for ["https +http://aspnetsseserver"]
-        // fix: read the environment value for the key 'services__aspnetsseserver__https__0' to get the url for the aspnet core sse server
+        // Ideally would use ServiceDiscovery here
         var serviceName = "McpServer";
         var name = $"services__{serviceName}__https__0";
         var url = Environment.GetEnvironmentVariable(name) + "/sse";
@@ -68,24 +68,6 @@ internal sealed class TravelAgencyAgent(
         AddMessage(new CandidateItineraryChatItem("Here are trips matching your requirements.", options));
         await WriteStateAsync(cancellationToken);
     }
-
-    //[Tool, Description("Returns a list of available flights.")]
-    //public async ValueTask<List<Flight>> SearchFlightsAsync(CancellationToken cancellationToken)
-    //{
-    //    try
-    //    {
-    //        string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "flights.json");
-    //        string jsonData = await File.ReadAllTextAsync(filePath, cancellationToken);
-
-    //        var flights = JsonSerializer.Deserialize<List<Flight>>(jsonData, JsonSerializerOptions.Web);
-    //        return flights ?? [];
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        logger.LogError(ex, "Error loading flights from JSON file");
-    //        return [];
-    //    }
-    //}
 }
 
 [GenerateSerializer]
