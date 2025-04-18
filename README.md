@@ -4,6 +4,19 @@ _Earth's premiere Travel Booking and Expense reporting app_
 
 ![Screenshot of the main page](./assets/itinerary_example.jpeg)
 
+## Features
+
+* Multi-agent workflow
+* Chat streaming
+* Chat persistence
+* Multi-model
+* Agentic memory
+* Human-In-The-Loop workflows (durable execution)
+* Observability (logs, traces, metrics)
+* Elastic scalability
+* Fault tolerance
+* Cloud-ready
+
 ## Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
