@@ -5,13 +5,13 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Aspire.Azure.AI.OpenAI" Version="9.1.0-preview.1.25121.10" />
-    <PackageVersion Include="Aspire.Azure.Data.Tables" Version="9.1.0" />
-    <PackageVersion Include="Aspire.Azure.Storage.Blobs" Version="9.1.0" />
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.1.0" />
-    <PackageVersion Include="Aspire.Hosting.Azure.CognitiveServices" Version="9.1.0" />
-    <PackageVersion Include="Aspire.Hosting.Azure.Storage" Version="9.1.0" />
-    <PackageVersion Include="Aspire.Hosting.NodeJs" Version="9.1.0" />
-    <PackageVersion Include="Aspire.Hosting.Orleans" Version="9.1.0" />
+    <PackageVersion Include="Aspire.Azure.Data.Tables" Version="9.2.0" />
+    <PackageVersion Include="Aspire.Azure.Storage.Blobs" Version="9.2.0" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.2.0" />
+    <PackageVersion Include="Aspire.Hosting.Azure.CognitiveServices" Version="9.2.0" />
+    <PackageVersion Include="Aspire.Hosting.Azure.Storage" Version="9.2.0" />
+    <PackageVersion Include="Aspire.Hosting.NodeJs" Version="9.2.0" />
+    <PackageVersion Include="Aspire.Hosting.Orleans" Version="9.2.0" />
     <PackageVersion Include="Azure.Identity" Version="1.13.2" />
     <PackageVersion Include="CommunityToolkit.Aspire.Hosting.NodeJS.Extensions" Version="9.3.0" />
     <PackageVersion Include="CommunityToolkit.Aspire.Hosting.Ollama" Version="9.3.0" />
@@ -26,8 +26,8 @@
     <PackageVersion Include="Microsoft.Extensions.AI.AzureAIInference" Version="9.4.0-preview.1.25207.5" />
     <PackageVersion Include="Microsoft.Extensions.AI.Ollama" Version="9.4.0-preview.1.25207.5" />
     <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="9.4.0-preview.1.25207.5" />
-    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.3.0" />
-    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="9.1.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.4.0" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="9.2.0" />
     <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="9.2.0-dev-202503271229" />
     <PackageVersion Include="Microsoft.Orleans.Reminders" Version="9.2.0-dev-202503271229" />
     <PackageVersion Include="Microsoft.Orleans.Reminders.AzureStorage" Version="9.2.0-dev-202503271229" />
@@ -37,7 +37,7 @@
     <PackageVersion Include="ModelContextProtocol" Version="0.1.0-preview.9" />
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="0.1.0-preview.9" />
     <PackageVersion Include="Octokit" Version="14.0.0" />
-    <PackageVersion Include="OllamaSharp" Version="5.1.9" />
+    <PackageVersion Include="OllamaSharp" Version="5.1.13" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.11.2" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.11.2" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.11.1" />
