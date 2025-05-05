@@ -80,7 +80,6 @@ public static class ChatClientExtensions
     public static ChatClientBuilder AddKeyedChatClient(this IHostApplicationBuilder builder, string connectionName)
     {
         var cs = builder.Configuration.GetConnectionString(connectionName);
-        cs = $"{cs};Model={builder.Configuration[$"{connectionName}:DeploymentName"]};Provider={builder.Configuration[$"{connectionName}:ProviderName"]}";
 
         if (!ChatClientConnectionInfo.TryParse(cs, out var connectionInfo))
         {

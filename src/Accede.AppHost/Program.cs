@@ -11,18 +11,18 @@ var azOpenAiResourceGroup = builder.AddParameterFromConfiguration("AzureOpenAIRe
 var reasoningModel = builder.AddAIModel("reasoning").AsAzureAIInference("DeepSeek-R1", azModelsEndpoint, azModelsKey);
 var smallModel = builder.AddAIModel("small").AsAzureAIInference("Phi-4", azModelsEndpoint, azModelsKey);
 var largeModelName = "gpt-4o";
-IResourceBuilder<IResourceWithConnectionString> largeModel;
-switch (builder.ExecutionContext.IsPublishMode)
-{
-    case true:
-        var aoai = builder.AddAzureOpenAI("large-ai");
-        aoai.AddDeployment(largeModelName, largeModelName, "2024-11-20");
-        largeModel = aoai;
-        break;
-    case false:
-        largeModel = builder.AddAIModel("large").AsAzureOpenAI(largeModelName, o => o.AsExisting(azOpenAiResource, azOpenAiResourceGroup));
-        break;
-}
+IResourceBuilder<IResourceWithConnectionString> largeModel = builder.AddAIModel("large")
+    .AsAzureOpenAI(largeModelName, o =>
+    {
+        if (o.ApplicationBuilder.ExecutionContext.IsPublishMode)
+        {
+            o.AddDeployment(largeModelName, largeModelName, "2024-11-20");
+        }
+        else
+        {
+            o.AsExisting(azOpenAiResource, azOpenAiResourceGroup);
+        }
+    });
 
 var azureStorage = builder.AddAzureStorage("storage").RunAsEmulator(c =>
 {
@@ -40,12 +40,10 @@ var backend = builder.AddProject<Projects.Accede_Service>("service")
     .WithReference(reasoningModel)
     .WithReference(smallModel)
     .WithReference(largeModel)
-    .WithEnvironment("large__DeploymentName", largeModelName)
-    .WithEnvironment("large__ProviderName", "AzureOpenAI")
     .WaitFor(mcpServer)
     .WaitFor(reasoningModel)
     .WaitFor(smallModel)
-    .WaitFor(largeModel)
+    //.WaitFor(largeModel)
     .WithReference(orleans)
     .WithReference(azureStorage.AddBlobs("state"))
     .WithReference(azureStorage.AddBlobs("uploads"));
