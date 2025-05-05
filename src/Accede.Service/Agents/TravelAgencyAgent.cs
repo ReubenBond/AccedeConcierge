@@ -18,7 +18,7 @@ internal sealed class TravelAgencyAgent(
     [FromKeyedServices("large")] IChatClient chatClient,
     ILoggerFactory loggerFactory) : ChatAgent(logger, chatClient), ITravelAgencyAgent
 {
-    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         McpClientOptions mcpClientOptions = new()
         { ClientInfo = new() { Name = "AspNetCoreSseClient", Version = "1.0.0" } };
@@ -34,12 +34,12 @@ internal sealed class TravelAgencyAgent(
             Endpoint = new Uri(url),
         }, loggerFactory);
 
-        var mcpClient = McpClientFactory.CreateAsync(clientTransport, mcpClientOptions, loggerFactory).GetAwaiter().GetResult();
-        var tools = mcpClient.ListToolsAsync().GetAwaiter().GetResult();
+        var mcpClient = await McpClientFactory.CreateAsync(clientTransport, mcpClientOptions, loggerFactory);
+        var tools = await mcpClient.ListToolsAsync();
         var currentTools = ChatOptions.Tools ?? [];
         ChatOptions.Tools = [.. tools, .. currentTools];
 
-        return base.OnActivateAsync(cancellationToken);
+        await base.OnActivateAsync(cancellationToken);
     }
 
     protected override Task<List<ChatItem>> OnChatCreatedAsync(CancellationToken cancellationToken)
