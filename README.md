@@ -10,6 +10,7 @@ _Earth's premiere Travel Booking and Expense reporting app_
 * Chat streaming
 * Chat persistence
 * Multi-model
+* Multi-modal
 * Agentic memory
 * Human-In-The-Loop workflows (durable execution)
 * Observability (logs, traces, metrics)
@@ -19,7 +20,7 @@ _Earth's premiere Travel Booking and Expense reporting app_
 
 ## Prerequisites
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
+- [.NET 9 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/9.0)
 - [Azure AI Foundry Project](https://learn.microsoft.com/en-us/azure/ai-foundry/how-to/create-projects?tabs=ai-studio)
 - [Azure OpenAI Resource](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/create-resource?pivots=web-portal)
 

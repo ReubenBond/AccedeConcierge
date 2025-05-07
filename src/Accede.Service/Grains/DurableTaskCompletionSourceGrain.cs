@@ -1,4 +1,6 @@
-﻿using Orleans.Journaling;
+﻿using Orleans.DurableTasks;
+using Orleans.Journaling;
+using System.Distributed.AI.Agents;
 using System.Distributed.DurableTasks;
 
 namespace Accede.Service.Grains;
@@ -18,7 +20,7 @@ public interface IDurableTaskCompletionSourceGrain<T> : IGrainWithStringKey
     ValueTask<DurableTaskCompletionSourceState<T>> GetState();
 }
 
-public class DurableTaskCompletionSourceGrain<T>([FromKeyedServices("state")] IDurableTaskCompletionSource<T> state) : DurableGrain, IDurableTaskCompletionSourceGrain<T>
+public class DurableTaskCompletionSourceGrain<T>([FromKeyedServices("state")] IDurableTaskCompletionSource<T> state) : Agent, IDurableTaskCompletionSourceGrain<T>
 {
     public async ValueTask<bool> TrySetResult(T value)
     {

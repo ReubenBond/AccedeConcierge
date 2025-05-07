@@ -15,7 +15,7 @@ using System.Runtime.CompilerServices;
 namespace Accede.Service.Agents;
 
 [Reentrant]
-public abstract class ChatAgent : DurableGrain, IChatAgent
+public abstract class ChatAgent : Agent, IChatAgent
 {
     private readonly CancellationTokenSource _shutdownCts = new();
     private readonly AsyncManualResetEvent _pendingMessageEvent = new();

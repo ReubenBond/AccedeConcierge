@@ -28,12 +28,14 @@
     <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="9.4.0-preview.1.25207.5" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.4.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="9.2.0" />
-    <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="9.2.0-dev-202503271229" />
-    <PackageVersion Include="Microsoft.Orleans.Reminders" Version="9.2.0-dev-202503271229" />
-    <PackageVersion Include="Microsoft.Orleans.Reminders.AzureStorage" Version="9.2.0-dev-202503271229" />
-    <PackageVersion Include="Microsoft.Orleans.Serialization.SystemTextJson" Version="9.2.0-dev-202503271229" />
-    <PackageVersion Include="Microsoft.Orleans.Server" Version="9.2.0-dev-202503271229" />
-    <PackageVersion Include="Microsoft.Orleans.Journaling" Version="9.2.0-dev-202503271229" />
+    <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="9.2.0-dev-202505061337" />
+    <PackageVersion Include="Microsoft.Orleans.Reminders" Version="9.2.0-dev-202505061337" />
+    <PackageVersion Include="Microsoft.Orleans.Reminders.AzureStorage" Version="9.2.0-dev-202505061337" />
+    <PackageVersion Include="Microsoft.Orleans.Serialization.SystemTextJson" Version="9.2.0-dev-202505061337" />
+    <PackageVersion Include="Microsoft.Orleans.Server" Version="9.2.0-dev-202505061337" />
+    <PackageVersion Include="Microsoft.Orleans.Journaling" Version="9.2.0-dev-202505061337.alpha.1" />
+    <PackageVersion Include="Microsoft.Orleans.Journaling.AzureStorage" Version="9.2.0-dev-202505061337.alpha.1" />
+    <PackageVersion Include="System.Distributed.DurableTasks" Version="9.2.0-dev-202505061337" />
     <PackageVersion Include="ModelContextProtocol" Version="0.1.0-preview.9" />
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="0.1.0-preview.9" />
     <PackageVersion Include="Octokit" Version="14.0.0" />

@@ -71,7 +71,7 @@ internal sealed partial class UserLiaisonAgent(
     }
 
     [Tool, Description("Creates a greeting message for the user")]
-    public async DurableTask<string> SayHello([Description("The user's name.")] string userName)
+    public async Task<string> SayHello([Description("The user's name.")] string userName)
     {
         return $"Hello, {userName}! How can I help you today?";
     }

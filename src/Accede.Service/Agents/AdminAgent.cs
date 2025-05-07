@@ -1,6 +1,8 @@
 ﻿using Accede.Service.Grains;
 using Accede.Service.Models;
+using Orleans.DurableTasks;
 using Orleans.Journaling;
+using System.Distributed.AI.Agents;
 using System.Distributed.DurableTasks;
 
 namespace Accede.Service.Agents;
@@ -14,7 +16,7 @@ internal interface IAdminAgent : IGrainWithStringKey
 
 public class AdminAgent(
     [FromKeyedServices("incoming-requests")] IDurableDictionary<string, TripRequest> requests,
-    [FromKeyedServices("completed-requests")] IDurableSet<string> processedRequests) : DurableGrain, IAdminAgent
+    [FromKeyedServices("completed-requests")] IDurableSet<string> processedRequests) : Agent, IAdminAgent
 {
     public async DurableTask<TripRequestResult> RequestApproval(TripRequest request)
     {

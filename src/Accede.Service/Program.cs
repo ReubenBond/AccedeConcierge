@@ -21,13 +21,10 @@ builder.UseOrleans(siloBuilder =>
     siloBuilder.AddStateMachineStorage();
     siloBuilder.AddJournaledDurableTaskStorage();
     siloBuilder.Services.AddSerializer(s => s.AddJsonSerializer(t => t.Assembly.Equals(typeof(ChatMessage).Assembly)));
-    siloBuilder.AddAzureAppendBlobStateMachineStorage(optionsBuilder =>
-    {
-        optionsBuilder.Configure((AzureAppendBlobStateMachineStorageOptions options, IServiceProvider serviceProvider) =>
-        {
-            options.ConfigureBlobServiceClient(ct => Task.FromResult(serviceProvider.GetRequiredKeyedService<BlobServiceClient>("state")));
-        });
-    });
+    siloBuilder.AddAzureAppendBlobStateMachineStorage();
+    siloBuilder.Services.AddOptions<AzureAppendBlobStateMachineStorageOptions>()
+        .Configure((AzureAppendBlobStateMachineStorageOptions options, IServiceProvider serviceProvider)
+            => options.ConfigureBlobServiceClient(ct => Task.FromResult(serviceProvider.GetRequiredKeyedService<BlobServiceClient>("state"))));
 });
 
 builder.AddKeyedChatClient("reasoning").UseDurableFunctionInvocation(configure: c => c.AllowConcurrentInvocation = true);
