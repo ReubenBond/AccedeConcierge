@@ -3,6 +3,7 @@ using Microsoft.Extensions.AI;
 using Orleans.Concurrency;
 using Orleans.Journaling;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Distributed.AI.Agents;
 using System.Distributed.DurableTasks;
 using System.Text.Json;
@@ -136,6 +137,7 @@ internal sealed partial class UserLiaisonAgent(
             new ChatMessage(
                 ChatRole.System,
                 $"""
+                The current year is {DateTime.UtcNow.Year}. Assume all travel requests are for the current year and all travel agent responses are also for the current year.
                 You are an advocate/agent for your customer. You are helping them to find suitable travel itineraries based on their preferences and plans.
                 You are conversing with a travel agent who will provide you with candidate itineraries based on what you tell them.
                 Each time you receive a candidate itinerary, check that it meets the customer's preferences and plans.
@@ -168,6 +170,10 @@ internal sealed partial class UserLiaisonAgent(
         while (iteration++ < 5)
         {
             var request = await _chatClient.GetResponseAsync(messages, cancellationToken: cancellationToken);
+            if (Debugger.IsAttached)
+            {
+                AddMessage(new TripRequestUpdated("Liaison: " + request.Text) { Id = Guid.NewGuid().ToString() });
+            }
 
             if (request.Text.Contains("Donezo") && candidate is not null)
             {
@@ -178,6 +184,11 @@ internal sealed partial class UserLiaisonAgent(
 
             // Submit the request to the travel agency agent.
             var response = await travelAgent.SendRequestAsync(new UserMessage(request.Text) { Id = iteration.ToString() });
+
+            if (Debugger.IsAttached)
+            {
+                AddMessage(new TripRequestUpdated("Travel Agent: " + request.Text) { Id = Guid.NewGuid().ToString() });
+            }
 
             // Check if the response includes a suitable candidate itinerary
             if (response is CandidateItineraryChatItem newCandidate)
