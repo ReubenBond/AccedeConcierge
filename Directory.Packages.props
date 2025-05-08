@@ -5,13 +5,13 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Aspire.Azure.AI.OpenAI" Version="9.1.0-preview.1.25121.10" />
-    <PackageVersion Include="Aspire.Azure.Data.Tables" Version="9.2.0" />
-    <PackageVersion Include="Aspire.Azure.Storage.Blobs" Version="9.2.0" />
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.2.0" />
-    <PackageVersion Include="Aspire.Hosting.Azure.CognitiveServices" Version="9.2.0" />
-    <PackageVersion Include="Aspire.Hosting.Azure.Storage" Version="9.2.0" />
-    <PackageVersion Include="Aspire.Hosting.NodeJs" Version="9.2.0" />
-    <PackageVersion Include="Aspire.Hosting.Orleans" Version="9.2.0" />
+    <PackageVersion Include="Aspire.Azure.Data.Tables" Version="9.2.1" />
+    <PackageVersion Include="Aspire.Azure.Storage.Blobs" Version="9.2.1" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.2.1" />
+    <PackageVersion Include="Aspire.Hosting.Azure.CognitiveServices" Version="9.2.1" />
+    <PackageVersion Include="Aspire.Hosting.Azure.Storage" Version="9.2.1" />
+    <PackageVersion Include="Aspire.Hosting.NodeJs" Version="9.2.1" />
+    <PackageVersion Include="Aspire.Hosting.Orleans" Version="9.2.1" />
     <PackageVersion Include="Azure.Identity" Version="1.13.2" />
     <PackageVersion Include="CommunityToolkit.Aspire.Hosting.NodeJS.Extensions" Version="9.3.0" />
     <PackageVersion Include="CommunityToolkit.Aspire.Hosting.Ollama" Version="9.3.0" />
