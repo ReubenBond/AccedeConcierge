@@ -24,7 +24,7 @@ internal sealed class TravelAgencyAgent(
         { ClientInfo = new() { Name = "AspNetCoreSseClient", Version = "1.0.0" } };
 
         // Ideally would use ServiceDiscovery here
-        var serviceName = "McpServer";
+        var serviceName = "mcpserver";
         var name = $"services__{serviceName}__https__0";
         var url = Environment.GetEnvironmentVariable(name) + "/sse";
 

@@ -73,7 +73,7 @@ public static class ModelExtensions
     {
         builder.Reset();
 
-        var openAIModel = builder.ApplicationBuilder.AddAzureOpenAI(builder.Resource.Name);
+        var openAIModel = builder.ApplicationBuilder.AddAzureOpenAI($"{builder.Resource.Name}-ai");
 
         configure?.Invoke(openAIModel);
 
@@ -81,6 +81,10 @@ public static class ModelExtensions
         // Add the model name to the connection string
         builder.Resource.ConnectionString = ReferenceExpression.Create($"{openAIModel.Resource.ConnectionStringExpression};Model={modelName}");
         builder.Resource.Provider = "AzureOpenAI";
+
+        builder.WithParentRelationship(openAIModel);
+        builder.ApplicationBuilder.AddResource(builder.Resource);
+
         return builder;
     }
 

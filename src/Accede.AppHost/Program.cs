@@ -10,7 +10,19 @@ var azOpenAiResourceGroup = builder.AddParameterFromConfiguration("AzureOpenAIRe
 
 var reasoningModel = builder.AddAIModel("reasoning").AsAzureAIInference("DeepSeek-R1", azModelsEndpoint, azModelsKey);
 var smallModel = builder.AddAIModel("small").AsAzureAIInference("Phi-4", azModelsEndpoint, azModelsKey);
-var largeModel = builder.AddAIModel("large").AsAzureOpenAI("gpt-4o", o => o.AsExisting(azOpenAiResource, azOpenAiResourceGroup));
+var largeModelName = "gpt-4o";
+IResourceBuilder<IResourceWithConnectionString> largeModel = builder.AddAIModel("large")
+    .AsAzureOpenAI(largeModelName, o =>
+    {
+        if (o.ApplicationBuilder.ExecutionContext.IsPublishMode)
+        {
+            o.AddDeployment(largeModelName, largeModelName, "2024-11-20");
+        }
+        else
+        {
+            o.AsExisting(azOpenAiResource, azOpenAiResourceGroup);
+        }
+    });
 
 var azureStorage = builder.AddAzureStorage("storage").RunAsEmulator(c =>
 {
@@ -21,7 +33,7 @@ var azureStorage = builder.AddAzureStorage("storage").RunAsEmulator(c =>
 var orleans = builder.AddOrleans("orleans")
     .WithDevelopmentClustering();
 
-var mcpServer = builder.AddProject<Projects.MCPServer>("McpServer");
+var mcpServer = builder.AddProject<Projects.MCPServer>("mcpserver");
 
 var backend = builder.AddProject<Projects.Accede_Service>("service")
     .WithReference(mcpServer)
@@ -29,9 +41,9 @@ var backend = builder.AddProject<Projects.Accede_Service>("service")
     .WithReference(smallModel)
     .WithReference(largeModel)
     .WaitFor(mcpServer)
-    .WaitFor(reasoningModel)
-    .WaitFor(smallModel)
-    .WaitFor(largeModel)
+    //.WaitFor(reasoningModel)
+    //.WaitFor(smallModel)
+    //.WaitFor(largeModel)
     .WithReference(orleans)
     .WithReference(azureStorage.AddBlobs("state"))
     .WithReference(azureStorage.AddBlobs("uploads"));
@@ -41,6 +53,7 @@ builder.AddNpmApp("webui", "../webui")
        .WithHttpEndpoint(env: "PORT", port: 35_369, isProxied: false)
        .WithEnvironment("BACKEND_URL", backend.GetEndpoint("http"))
        .WithExternalHttpEndpoints()
-       .WithOtlpExporter();
+       .WithOtlpExporter()
+       .PublishAsDockerFile();
 
 builder.Build().Run();
