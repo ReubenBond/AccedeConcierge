@@ -58,6 +58,8 @@ internal sealed class TravelAgencyAgent(
                 """)
             ];
 
+        ChatOptions.ChatThreadId = Guid.NewGuid().ToString();
+
         return Task.FromResult(systemPrompt);
     }
 

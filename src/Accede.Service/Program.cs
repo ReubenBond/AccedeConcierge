@@ -28,7 +28,9 @@ builder.UseOrleans(siloBuilder =>
 });
 
 //builder.AddKeyedChatClient("reasoning").UseDurableFunctionInvocation(configure: c => c.AllowConcurrentInvocation = true);
-builder.AddKeyedChatClient("large").UseDurableFunctionInvocation(configure: c => c.AllowConcurrentInvocation = true);
+builder.AddKeyedChatClient("large")
+    .UseDurableFunctionInvocation(configure: c => c.AllowConcurrentInvocation = true)
+    .UseSamplingReporter();
 //builder.AddKeyedChatClient("small").UseDurableFunctionInvocation(configure: c => c.AllowConcurrentInvocation = true);
 
 // Add service defaults & Aspire client integrations.

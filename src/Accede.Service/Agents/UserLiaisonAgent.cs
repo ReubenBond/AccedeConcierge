@@ -33,6 +33,7 @@ internal sealed partial class UserLiaisonAgent(
     protected override async Task<List<ChatItem>> OnChatCreatedAsync(CancellationToken cancellationToken)
     {
         var userName = this.GetPrimaryKeyString();
+        ChatOptions.ChatThreadId = Guid.NewGuid().ToString();
         return
             [
                 new SystemPrompt(

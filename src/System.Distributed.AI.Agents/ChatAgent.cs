@@ -1,5 +1,7 @@
 ﻿using Accede.Service.Utilities;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.AI.Evaluation.Quality;
+using Microsoft.Extensions.AI.Evaluation.Reporting.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Orleans.Concurrency;
@@ -42,7 +44,7 @@ public abstract class ChatAgent : Agent, IChatAgent
         // Register tools
         _toolRegistry = AgentToolRegistry.Create(GetType(), GrainContext, FunctionFactoryOptions);
         GrainContext.SetComponent(_toolRegistry);
-        ChatOptions = new ChatOptions { Tools = _toolRegistry.Tools };
+        ChatOptions = new ChatOptions { Tools = _toolRegistry.Tools, ChatThreadId = Guid.NewGuid().ToString() };
     }
 
     protected IList<AITool> Tools => _toolRegistry.Tools;
@@ -196,6 +198,10 @@ public abstract class ChatAgent : Agent, IChatAgent
 
                 if (_streamingFragment is not null)
                 {
+                    //var r = DiskBasedReportingConfiguration.Create("C:\\github\\AccedeConcierge\\reporting", [new RelevanceTruthAndCompletenessEvaluator()], new Microsoft.Extensions.AI.Evaluation.ChatConfiguration(_chatClient));
+                    //await using var scenarioRun = await r.CreateScenarioRunAsync(GetType().Name);
+                    //var evalResult = await scenarioRun.EvaluateAsync(chatMessages, new ChatResponse(new ChatMessage(_streamingFragment.Role, _streamingFragment.Text)));
+
                     AddFinalResponse();
                     _streamingFragment = null;
                     _historyUpdatedEvent.SignalAndReset();
